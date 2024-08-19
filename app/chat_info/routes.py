@@ -1,6 +1,7 @@
 from app.config.setting import settings
 from app.chat_info.services import create_chat, get_chat_info, update_chat_info, delete_chat
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, HTTPException, Query
+from typing import Optional, List
 from app.chat_info.models import Chat, UpdateChatInfo, ChatInfoParams, DeleteChatInfo
 
 router = APIRouter()
@@ -8,7 +9,24 @@ router = APIRouter()
 # below are get routes
 
 @router.get("/info")
-async def get_chat_info_route(params: ChatInfoParams):
+async def get_chat_info_route(
+    chat_id: Optional[str] = Query(None),
+    name: Optional[str] = Query(None),
+    chat_type: Optional[str] = Query(None),
+    language: Optional[List[str]] = Query(None),
+    category: Optional[List[str]] = Query(None),
+    label: Optional[List[str]] = Query(None),
+    num: Optional[int] = Query(100)
+):
+    params = ChatInfoParams(
+        chat_id=chat_id,
+        name=name,
+        chat_type=chat_type,
+        language=language,
+        category=category,
+        label=label,
+        num=num
+    )
     try:
         res = await get_chat_info(params)
         return {
