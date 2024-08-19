@@ -1,4 +1,4 @@
-from app.chat_info.models import Chat, UpdateChatInfoParams, ChatInfoParams
+from app.chat_info.models import Chat, UpdateChatInfo, ChatInfoParams, DeleteChatInfo
 from app.config.setting import settings
 from app.db.database import MongoClient
 from fastapi import HTTPException
@@ -27,6 +27,8 @@ async def get_chat_info(params: ChatInfoParams):
     """
     Query params have the following case:
     1. `chat_id`, `name` won't combine with other params
+    2. `chat_type`, `language`, `category`, `label` can combine with `num`
+        and logic will be `OR` between params and `AND` within each param
     """
     if params.chat_id:
         return await client.find_one(
@@ -54,3 +56,36 @@ async def get_chat_info(params: ChatInfoParams):
         query=query,
         limit=params.num
     )
+
+async def update_chat_info(params: UpdateChatInfo):
+    chat_data = await client.find_one(
+        collection,
+        query={
+            "chat_id": params.chat_id
+        }
+    )
+    if not chat_data:
+        raise HTTPException(status_code=400, detail=f"Chat not found with id `{params.chat_id}`")
+    
+
+    chat = Chat(**chat_data)
+    chat.update(params.model_dump())
+    return await client.update_one(
+        collection,
+        query={
+            "chat_id": params.chat_id
+        },
+        data=chat.model_dump()
+    )
+
+async def delete_chat(params: DeleteChatInfo):
+    status = await client.delete_one(
+        collection,
+        query={
+            "chat_id": params.chat_id
+        }
+    )
+
+    return {
+        "delete_status": status
+    }

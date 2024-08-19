@@ -25,6 +25,9 @@ class UpdateChatInfo(BaseModel):
     category: list[str] = None
     label: list[str] = None
 
+class DeleteChatInfo(BaseModel):
+    chat_id: str  # required
+
 class Chat(BaseModel):
     chat_id: str  # fixed can't be changed
     name: str
