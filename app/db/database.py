@@ -12,10 +12,10 @@ class MongoClient:
     def get_collection(self, name: str) -> Collection:
         return self.db[name]
     
-    async def insert_one(self, name: str, document: dict) -> dict:
+    async def insert_one(self, name: str, document: dict) -> str:
         collection = self.get_collection(name)
         result = await collection.insert_one(document)
-        return result.inserted_id
+        return str(result.inserted_id)
     
     async def find_one(self, name: str, query: Dict[str, Any]) -> Dict[str, Any]:
         collection: Collection = self.get_collection(name)
@@ -32,14 +32,18 @@ class MongoClient:
         if limit > 0:
             cursor = cursor.limit(limit)
 
-        results = await cursor.to_list(length=None)  # Convert cursor to a list of documents
-        return results
+        result = []
 
+        async for document in cursor:
+            document.pop('_id', None)
+            result.append(document)
+        return result
+    
     async def update_one(self, name: str, query: Dict[str, Any], update: Dict[str, Any]) -> Dict[str, Any]:
         collection: Collection = self.get_collection(name)
         result = await collection.find_one_and_update(
-            query, 
-            {'$set': update}, 
+            query,
+            {'$set': update},
             return_document=True
         )
         return result
