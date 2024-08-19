@@ -36,15 +36,7 @@ async def update_users_info(params: UpdateUsersInfoParams):
         raise HTTPException(status_code=400, detail=f"User not found with id `{params.user_id}`")
 
     user = User(**user_data)
-
-    if params.admin:
-        user.admin = params.admin
-    if params.whitelist:
-        user.whitelist = params.whitelist
-    if params.name:
-        user.name = params.name
-    
-    user.updated_timestamp = dt.now()
+    user.update(params)
 
     return await client.update_one(
         collection,
