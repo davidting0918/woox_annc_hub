@@ -17,14 +17,16 @@ async def create_user(user: User):
     )
     if results:
         raise HTTPException(status_code=400, detail=f"User already exists with id `{user.user_id}`")
-    return await client.insert_one(collection, user.model_dump())
+    return {
+        "insert_id": await client.insert_one(collection, user.model_dump())
+    }
 
 async def list_users_info(params: UserInfoParams):
     query = {
         k: v for k, v in params.model_dump().items() if v and k not in ['num']
     }
 
-    return await client.find_many(collection, query=query, num=params.num)
+    return await client.find_many(collection, query=query, limit=params.num)
 
 async def update_users_info(params: UpdateUsersInfoParams):
     user_data = await client.find_one(
