@@ -38,8 +38,8 @@ class MongoClient:
     async def update_one(self, name: str, query: Dict[str, Any], update: Dict[str, Any]) -> Dict[str, Any]:
         collection: Collection = self.get_collection(name)
         result = await collection.find_one_and_update(
-            query, 
-            {'$set': update}, 
+            query,
+            {'$set': update},
             return_document=True
         )
         return result
