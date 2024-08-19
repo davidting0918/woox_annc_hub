@@ -33,7 +33,6 @@ class MongoClient:
             cursor = cursor.limit(limit)
 
         result = []
-
         async for document in cursor:
             document.pop('_id', None)
             result.append(document)
