@@ -32,7 +32,8 @@ class MongoClient:
         if limit > 0:
             cursor = cursor.limit(limit)
 
-        result = []
+        results = [i for i in cursor]  # Convert cursor to a list of documents
+        return results
 
         async for document in cursor:
             document.pop('_id', None)
