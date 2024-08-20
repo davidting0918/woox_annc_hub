@@ -69,13 +69,13 @@ async def update_chat_info(params: UpdateChatInfo):
     
 
     chat = Chat(**chat_data)
-    chat.update(params.model_dump())
+    chat.update(params)
     return await client.update_one(
         collection,
         query={
             "chat_id": params.chat_id
         },
-        data=chat.model_dump()
+        update=chat.model_dump()
     )
 
 async def delete_chat(params: DeleteChatInfo):

@@ -45,6 +45,7 @@ class MongoClient:
             {'$set': update},
             return_document=True
         )
+        result.pop('_id', None)
         return result
 
     async def delete_one(self, name: str, query: Dict[str, Any]) -> bool:

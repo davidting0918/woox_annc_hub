@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime as dt
 
@@ -29,9 +29,9 @@ class User(BaseModel):
     def update(self, params: UpdateUsersInfoParams):
         if params.name:
             self.name = params.name
-        if params.admin:
+        if params.admin is not None:  # can't use if params.admin because it's a bool
             self.admin = params.admin
-        if params.whitelist:
+        if params.whitelist is not None:
             self.whitelist = params.whitelist
         
         self.updated_timestamp = dt.now()
