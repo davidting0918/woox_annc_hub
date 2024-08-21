@@ -27,8 +27,8 @@ class TicketStatus(str, Enum):
 # Shared models
 
 class TimestampModel(BaseModel):
-    created_timestamp: str = Field(default_factory=dt.now().isoformat())
-    updated_timestamp: str = Field(default_factory=dt.now().isoformat())
+    created_timestamp: str = Field(default_factory=dt.now().isoformat)
+    updated_timestamp: str = Field(default_factory=dt.now().isoformat)
 
     @property
     def _id(self):
@@ -55,7 +55,7 @@ class Announcement(TimestampModel):
     category: Optional[str] = None
     language: Optional[str] = None
     label: Optional[List[str]] = None
-    chats: List[Chat] = Field(default_factory=list)
+    chats: List[str] = Field(default_factory=list)  # value should be chat_id
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -98,7 +98,7 @@ class Ticket(TimestampModel):
 
 class PostTicket(Ticket):
     annc: Announcement
-    actual_chats: List[Chat] = Field(default_factory=list)
+    actual_chats: List[str] = Field(default_factory=list)  # value should be chat_id
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -125,3 +125,17 @@ class DeleteTicket(Ticket):
         self.ticket_id = f"DELETE-{self._id}"
         self.action = TicketAction.delete_annc
         self.status = TicketStatus.pending
+
+
+class CreateTicketParams(BaseModel):
+    ticket: PostTicket|EditTicket|DeleteTicket
+
+class TicketInfoParams(BaseModel):
+    ticket_id: str
+    creator_id: str
+    start_created_timestamp: str
+    end_created_timestamp: str
+    start_status_changed_timestamp: str
+    end_status_changed_timestamp: str
+    status: TicketStatus
+    num: int = 100

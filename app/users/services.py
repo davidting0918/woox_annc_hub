@@ -18,7 +18,7 @@ async def create_user(user: User):
     if results:
         raise HTTPException(status_code=400, detail=f"User already exists with id `{user.user_id}`")
     return {
-        "insert_id": await client.insert_one(collection, user.model_dump())
+        "inserted_id": await client.insert_one(collection, user.model_dump())
     }
 
 async def list_users_info(params: UserInfoParams):
