@@ -26,13 +26,13 @@ class TicketStatus(str, Enum):
 
 # Shared models
 
-class TimestampModdel(BaseModel):
+class TimestampModel(BaseModel):
     created_timestamp: str = Field(default_factory=dt.now().isoformat())
     updated_timestamp: str = Field(default_factory=dt.now().isoformat())
 
     @property
     def _id(self):
-        return uuid.uuid4().hex[:]
+        return uuid.uuid4().hex
     
     def update(self, **kwargs):
         for key, value in kwargs.items():
@@ -41,7 +41,7 @@ class TimestampModdel(BaseModel):
         self.updated_timestamp = dt.now().isoformat()
 
 
-class Announcement(TimestampModdel):
+class Announcement(TimestampModel):
     annc_id: str  # fixed when created
 
     # define content related fields
@@ -65,7 +65,7 @@ class Announcement(TimestampModdel):
     def post(self):
         pass
 
-class Ticket(TimestampModdel):
+class Ticket(TimestampModel):
     ticket_id: str
     action: TicketAction
     status: TicketStatus
@@ -117,11 +117,11 @@ class EditTicket(Ticket):
         self.action = TicketAction.edit_annc
         self.status = TicketStatus.pending
 
-class EditTicket(Ticket):
+class DeleteTicket(Ticket):
     annc: Announcement
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.ticket_id = f"EDIT-{self._id}"
-        self.action = TicketAction.edit_annc
+        self.ticket_id = f"DELETE-{self._id}"
+        self.action = TicketAction.delete_annc
         self.status = TicketStatus.pending

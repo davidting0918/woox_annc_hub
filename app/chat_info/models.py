@@ -37,8 +37,8 @@ class Chat(BaseModel):
     category: list[str] = []
     label: list[str] = []
     active: bool = True  # default is true
-    created_timestamp: dt = Field(default_factory=lambda: dt.now())
-    updated_timestamp: dt = Field(default_factory=lambda: dt.now())
+    created_timestamp: str = Field(default_factory=lambda: dt.now().isoformat())
+    updated_timestamp: str = Field(default_factory=lambda: dt.now().isoformat())
 
     def update(self, params: UpdateChatInfo):
         if params.name:
@@ -54,5 +54,5 @@ class Chat(BaseModel):
         if params.active is not None:
             self.active = params.active
 
-        self.updated_timestamp = dt.now()
+        self.updated_timestamp = dt.now().isoformat()
         
