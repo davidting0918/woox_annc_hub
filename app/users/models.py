@@ -23,8 +23,8 @@ class User(BaseModel):
     name: str
     admin: bool = False
     whitelist: bool = True
-    created_timestamp: dt = Field(default_factory=lambda: dt.now())
-    updated_timestamp: dt = Field(default_factory=lambda: dt.now()) # will update automatically when user info is updated
+    created_timestamp: str = Field(default_factory=lambda: dt.now().isoformat())
+    updated_timestamp: str = Field(default_factory=lambda: dt.now().isoformat()) # will update automatically when user info is updated
 
     def update(self, params: UpdateUsersInfoParams):
         if params.name:
@@ -34,4 +34,4 @@ class User(BaseModel):
         if params.whitelist is not None:
             self.whitelist = params.whitelist
         
-        self.updated_timestamp = dt.now()
+        self.updated_timestamp = dt.now().isoformat()

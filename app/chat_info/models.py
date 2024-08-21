@@ -24,6 +24,7 @@ class UpdateChatInfo(BaseModel):
     language: list[str] = None
     category: list[str] = None
     label: list[str] = None
+    active: bool = None
 
 class DeleteChatInfo(BaseModel):
     chat_id: str  # required
@@ -32,9 +33,10 @@ class Chat(BaseModel):
     chat_id: str  # fixed can't be changed
     name: str
     chat_type: ChatType
-    language: list[str]
-    category: list[str]
-    label: list[str]
+    language: list[str] = []
+    category: list[str] = []
+    label: list[str] = []
+    active: bool = True  # default is true
     created_timestamp: dt = Field(default_factory=lambda: dt.now())
     updated_timestamp: dt = Field(default_factory=lambda: dt.now())
 
@@ -49,6 +51,8 @@ class Chat(BaseModel):
             self.category = params.category
         if params.label:
             self.label = params.label
+        if params.active is not None:
+            self.active = params.active
 
         self.updated_timestamp = dt.now()
         
