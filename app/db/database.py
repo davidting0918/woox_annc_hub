@@ -22,6 +22,8 @@ class MongoClient:
     async def find_one(self, name: str, query: Dict[str, Any]) -> Dict[str, Any]:
         collection: Collection = self.get_collection(name)
         result = await collection.find_one(query)
+        if result:
+            result.pop("_id", None)
         return result
 
     async def find_many(

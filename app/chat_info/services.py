@@ -30,11 +30,16 @@ async def get_chat_info(params: ChatInfoParams):
     if params.name:
         return await client.find_one(collection, query={"name": params.name})
 
-    query = {
-        k: {"$in": v}
-        for k, v in params.model_dump().items()
-        if v and k in ["chat_type", "language", "category", "label"]
-    }
+    query = {}
+    if params.chat_type:
+        query["chat_type"] = params.chat_type
+    if params.language:
+        query["language"] = {"$in": params.language}
+    if params.category:
+        query["category"] = {"$in": params.category}
+    if params.label:
+        query["label"] = {"$in": params.label}
+
     return await client.find_many(collection, query=query, limit=params.num)
 
 

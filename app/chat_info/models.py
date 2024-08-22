@@ -23,12 +23,12 @@ class ChatInfoParams(BaseModel):
 
 class UpdateChatInfo(BaseModel):
     chat_id: str  # required
-    name: str = None
-    chat_type: ChatType = None
-    language: list[str] = None
-    category: list[str] = None
-    label: list[str] = None
-    active: bool = None
+    name: Optional[str] = None
+    chat_type: Optional[ChatType] = None
+    language: Optional[list[str]] = None
+    category: Optional[list[str]] = None
+    label: Optional[list[str]] = None
+    active: Optional[bool] = None
 
 
 class DeleteChatInfo(BaseModel):
