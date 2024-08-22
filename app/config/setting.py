@@ -1,10 +1,13 @@
-import os
-from dotenv import load_dotenv
-class Settings:
-    def __init__(self):
-        load_dotenv()
-        self.mongo_db_url: str = os.getenv("MONGO_DB_URL")
-        self.db_name: str = os.getenv("DB_NAME")
+from pydantic_settings import BaseSettings
+
+
+class Settings(BaseSettings):
+    mongo_db_url: str
+    db_name: str
+
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
 
 
 settings = Settings()

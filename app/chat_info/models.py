@@ -1,12 +1,15 @@
-from pydantic import BaseModel, Field
-from typing import Optional
-from enum import Enum
 from datetime import datetime as dt
+from enum import Enum
+from typing import Optional
+
+from pydantic import BaseModel, Field
+
 
 class ChatType(str, Enum):
-    group = 'group'
-    channel = 'channel'
-    supergroup = 'supergroup'
+    group = "group"
+    channel = "channel"
+    supergroup = "supergroup"
+
 
 class ChatInfoParams(BaseModel):
     chat_id: Optional[str] = None
@@ -17,6 +20,7 @@ class ChatInfoParams(BaseModel):
     label: Optional[list[str]] = None
     num: Optional[int] = 100
 
+
 class UpdateChatInfo(BaseModel):
     chat_id: str  # required
     name: str = None
@@ -26,8 +30,10 @@ class UpdateChatInfo(BaseModel):
     label: list[str] = None
     active: bool = None
 
+
 class DeleteChatInfo(BaseModel):
     chat_id: str  # required
+
 
 class Chat(BaseModel):
     chat_id: str  # fixed can't be changed
@@ -37,8 +43,8 @@ class Chat(BaseModel):
     category: list[str] = []
     label: list[str] = []
     active: bool = True  # default is true
-    created_timestamp: str = Field(default_factory=lambda: dt.now().isoformat())
-    updated_timestamp: str = Field(default_factory=lambda: dt.now().isoformat())
+    created_timestamp: int = Field(default_factory=lambda: int(dt.now().timestamp() * 1000))
+    updated_timestamp: int = Field(default_factory=lambda: int(dt.now().timestamp() * 1000))
 
     def update(self, params: UpdateChatInfo):
         if params.name:
@@ -54,5 +60,4 @@ class Chat(BaseModel):
         if params.active is not None:
             self.active = params.active
 
-        self.updated_timestamp = dt.now().isoformat()
-        
+        self.updated_timestamp = int(dt.now().timestamp() * 1000)

@@ -1,8 +1,20 @@
 # users/routes.py
-from fastapi import APIRouter, HTTPException, Body, Query
 from typing import Optional
-from app.users.models import User, UserInfoParams, UpdateUsersInfoParams, DeleteUserParams
-from app.users.services import create_user, list_users_info, update_users_info, delete_user
+
+from fastapi import APIRouter, Body, HTTPException, Query
+
+from app.users.models import (
+    DeleteUserParams,
+    UpdateUsersInfoParams,
+    User,
+    UserInfoParams,
+)
+from app.users.services import (
+    create_user,
+    delete_user,
+    list_users_info,
+    update_users_info,
+)
 
 router = APIRouter()
 
@@ -16,15 +28,9 @@ async def get_users_info(
     name: Optional[str] = Query(None),
     admin: Optional[bool] = Query(None),
     whitelist: Optional[bool] = Query(None),
-    num: Optional[int] = Query(100)
+    num: Optional[int] = Query(100),
 ):
-    params = UserInfoParams(
-        user_id=user_id,
-        name=name,
-        admin=admin,
-        whitelist=whitelist,
-        num=num
-    )
+    params = UserInfoParams(user_id=user_id, name=name, admin=admin, whitelist=whitelist, num=num)
     try:
         res = await list_users_info(params)
         return {"status": 1, "data": res}
@@ -41,6 +47,7 @@ async def create_user_route(user: User = Body(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error creating user: {str(e)}")
 
+
 @router.post("/delete")
 async def delete_user_route(params: DeleteUserParams = Body(...)):
     try:
@@ -48,6 +55,7 @@ async def delete_user_route(params: DeleteUserParams = Body(...)):
         return {"status": 1, "data": res}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting user: {str(e)}")
+
 
 @router.post("/update")
 async def update_user_info_route(params: UpdateUsersInfoParams = Body(...)):
