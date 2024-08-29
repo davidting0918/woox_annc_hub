@@ -1,8 +1,9 @@
 # users/routes.py
 from typing import Optional
 
-from fastapi import APIRouter, Body, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 
+from app.auth.services import verify_api_key
 from app.users.models import (
     DeleteUserParams,
     UpdateUsersInfoParams,
@@ -16,8 +17,7 @@ from app.users.services import (
     update_users_info,
 )
 
-router = APIRouter()
-
+router = APIRouter(dependencies=[Depends(verify_api_key)])
 
 # below are get routes
 

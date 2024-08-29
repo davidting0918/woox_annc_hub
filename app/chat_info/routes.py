@@ -1,7 +1,8 @@
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
+from app.auth.services import verify_api_key
 from app.chat_info.models import Chat, ChatInfoParams, DeleteChatInfo, UpdateChatInfo
 from app.chat_info.services import (
     create_chat,
@@ -10,7 +11,7 @@ from app.chat_info.services import (
     update_chat_info,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(verify_api_key)])
 
 # below are get routes
 

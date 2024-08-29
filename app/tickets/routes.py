@@ -1,7 +1,8 @@
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from app.auth.services import verify_api_key
 from app.tickets.models import (
     CreateTicketParams,
     TicketAction,
@@ -11,7 +12,7 @@ from app.tickets.models import (
 )
 from app.tickets.services import create_ticket, get_ticket_info, update_post_ticket
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(verify_api_key)])
 
 
 # below is `get` endpoints
