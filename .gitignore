@@ -2,5 +2,5 @@ venv
 __pycache__
 .vscode
 app/.env
-.env.development
+app/.env.development
 .idea

@@ -5,12 +5,18 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.auth.services import verify_api_key
 from app.tickets.models import (
     CreateTicketParams,
+    DeleteTicketParams,
     TicketAction,
     TicketInfoParams,
     TicketStatus,
     UpdateTicketParams,
 )
-from app.tickets.services import create_ticket, get_ticket_info, update_post_ticket
+from app.tickets.services import (
+    create_ticket,
+    delete_ticket,
+    get_ticket_info,
+    update_post_ticket,
+)
 
 router = APIRouter(dependencies=[Depends(verify_api_key)])
 
@@ -18,7 +24,7 @@ router = APIRouter(dependencies=[Depends(verify_api_key)])
 # below is `get` endpoints
 
 # get ticket info
-@router.get("/info/")
+@router.get("/info")
 async def get_ticket_info_route(
     ticket_id: Optional[str] = None,
     creator_id: Optional[str] = None,
@@ -51,7 +57,7 @@ async def get_ticket_info_route(
 
 
 # below is `post` endpoints
-@router.post("/create/")
+@router.post("/create")
 async def create_ticket_route(params: CreateTicketParams):
     try:
         res = await create_ticket(params)
@@ -63,8 +69,8 @@ async def create_ticket_route(params: CreateTicketParams):
         raise HTTPException(status_code=500, detail=f"Error creating ticket: {e}")
 
 
-@router.post("/update/")
-async def update_ticket_router(params: UpdateTicketParams):
+@router.post("/update")
+async def update_ticket_route(params: UpdateTicketParams):
     method_map = {
         TicketAction.post_annc: update_post_ticket,
         TicketAction.edit_annc: None,
@@ -79,3 +85,15 @@ async def update_ticket_router(params: UpdateTicketParams):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error updating ticket: {e}")
+
+
+@router.post("/delete")
+async def delete_ticket_route(params: DeleteTicketParams):
+    try:
+        res = await delete_ticket(params)
+        return {
+            "status": 1,
+            "data": res,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting ticket: {e}")

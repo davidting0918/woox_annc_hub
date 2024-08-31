@@ -5,6 +5,7 @@ from app.db.database import MongoClient
 from app.tickets.models import (
     CreateTicketParams,
     DeleteTicket,
+    DeleteTicketParams,
     EditTicket,
     PostTicket,
     TicketInfoParams,
@@ -92,3 +93,8 @@ async def update_post_ticket(params: UpdateTicketParams):
     ticket = PostTicket(**ticket_data)
     ticket.update(**params.ticket.model_dump())
     return await client.update_one(collection, query={"ticket_id": params.ticket_id}, update=ticket.model_dump())
+
+
+async def delete_ticket(params: DeleteTicketParams):
+    status = await client.delete_one(collection, query={"ticket_id": params.ticket_id})
+    return {"delete_status": status}
