@@ -12,9 +12,11 @@ from app.tickets.models import (
     UpdateTicketParams,
 )
 from app.tickets.services import (
+    approve_ticket,
     create_ticket,
     delete_ticket,
     get_ticket_info,
+    reject_ticket,
     update_post_ticket,
 )
 
@@ -67,6 +69,30 @@ async def create_ticket_route(params: CreateTicketParams):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error creating ticket: {e}")
+
+
+@router.post("/approve")
+async def approve_ticket_route(ticket_id: str, user_id: str):
+    try:
+        res = await approve_ticket(ticket_id, user_id)
+        return {
+            "status": 1,
+            "data": res,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error approving ticket: {e}")
+
+
+@router.post("/reject")
+async def reject_ticket_route(ticket_id: str, user_id: str):
+    try:
+        res = await reject_ticket(ticket_id, user_id)
+        return {
+            "status": 1,
+            "data": res,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error rejecting ticket: {e}")
 
 
 @router.post("/update")
