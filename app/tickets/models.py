@@ -161,6 +161,11 @@ class UpdateTicketParams(BaseModel):
     ticket: PostTicket | EditTicket | DeleteTicket
 
 
+class ApproveRejectParams(BaseModel):
+    ticket_id: str
+    user_id: str
+
+
 class TicketInfoParams(BaseModel):
     ticket_id: Optional[str] = None
     creator_id: Optional[str] = None

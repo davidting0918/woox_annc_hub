@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.auth.services import verify_api_key
 from app.tickets.models import (
+    ApproveRejectParams,
     CreateTicketParams,
     DeleteTicketParams,
     TicketAction,
@@ -72,9 +73,9 @@ async def create_ticket_route(params: CreateTicketParams):
 
 
 @router.post("/approve")
-async def approve_ticket_route(ticket_id: str, user_id: str):
+async def approve_ticket_route(params: ApproveRejectParams):
     try:
-        res = await approve_ticket(ticket_id, user_id)
+        res = await approve_ticket(params.ticket_id, params.user_id)
         return {
             "status": 1,
             "data": res,
@@ -84,9 +85,9 @@ async def approve_ticket_route(ticket_id: str, user_id: str):
 
 
 @router.post("/reject")
-async def reject_ticket_route(ticket_id: str, user_id: str):
+async def reject_ticket_route(params: ApproveRejectParams):
     try:
-        res = await reject_ticket(ticket_id, user_id)
+        res = await reject_ticket(params.ticket_id, params.user_id)
         return {
             "status": 1,
             "data": res,

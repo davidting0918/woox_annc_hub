@@ -24,6 +24,16 @@ class TestUsersRoutes(unittest.TestCase):
     def tearDown(self):
         self.loop.close()
 
+    def test_create_user(self):
+        async def run_test():
+            async with AsyncClient(app=app, base_url=self.base_url) as ac:
+                user_id = f"dev-test"
+                user = User(user_id=user_id, name=user_id, admin=False, whitelist=False)
+                res = await ac.post("/users/create", json=user.model_dump(), headers=self.headers)
+                self.assertEqual(res.status_code, 200, f"Response: {res.json()}")
+
+        self.loop.run_until_complete(run_test())
+
     def test_create_and_delete_user(self):
         async def run_test():
             async with AsyncClient(app=app, base_url=self.base_url) as ac:

@@ -108,8 +108,8 @@ async def approve_ticket(ticket_id: str, user_id: str):
     2. check ticket status is pending
     3. then approve the ticket
     """
-    params = {"ticket_id": ticket_id}
-    ticket_data = await client.find_one(collection, params)
+    query = {"ticket_id": ticket_id}
+    ticket_data = await client.find_one(collection, query)
     if not ticket_data:
         raise HTTPException(status_code=400, detail=f"Ticket not found with id: `{ticket_id}`")
 
