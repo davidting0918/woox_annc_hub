@@ -108,6 +108,9 @@ class TestTicketRoutes(unittest.TestCase):
                 params = ApproveRejectParams(ticket_id=ticket_id, user_id="dev-test")
                 res = await ac.post("/tickets/approve", json=params.model_dump(), headers=self.headers)
                 self.assertEqual(res.status_code, 200, f"Response: {res.json()}")
+                data = res.json()
+                self.assertEqual(data["status"], 1)
+                self.assertEqual(data["data"]["status"], "approved")
 
                 # test delete the ticket in the db
                 params = DeleteTicketParams(ticket_id=ticket_id)

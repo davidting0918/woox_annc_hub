@@ -7,10 +7,8 @@ from app.tickets.models import (
     ApproveRejectParams,
     CreateTicketParams,
     DeleteTicketParams,
-    TicketAction,
     TicketInfoParams,
     TicketStatus,
-    UpdateTicketParams,
 )
 from app.tickets.services import (
     approve_ticket,
@@ -18,7 +16,6 @@ from app.tickets.services import (
     delete_ticket,
     get_ticket_info,
     reject_ticket,
-    update_post_ticket,
 )
 
 router = APIRouter(dependencies=[Depends(verify_api_key)])
@@ -94,24 +91,6 @@ async def reject_ticket_route(params: ApproveRejectParams):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error rejecting ticket: {e}")
-
-
-@router.post("/update")
-async def update_ticket_route(params: UpdateTicketParams):
-    method_map = {
-        TicketAction.post_annc: update_post_ticket,
-        TicketAction.edit_annc: None,
-        TicketAction.delete_annc: None,
-        TicketAction.update_user: None,
-    }
-    try:
-        res = await method_map[params.ticket_action](params)
-        return {
-            "status": 1,
-            "data": res,
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error updating ticket: {e}")
 
 
 @router.post("/delete")

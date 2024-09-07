@@ -9,7 +9,6 @@ from app.tickets.models import (
     EditTicket,
     PostTicket,
     TicketInfoParams,
-    UpdateTicketParams,
 )
 from app.users.models import User
 from app.users.services import collection as user_collection
@@ -80,23 +79,6 @@ async def create_ticket(params: CreateTicketParams):
     return {"inserted_id": res}
 
 
-async def update_post_ticket(params: UpdateTicketParams):
-    # check if the ticket is already created
-    ticket_data = await client.find_one(collection, {"ticket_id": params.ticket_id, "action": "post_annc"})
-    if not ticket_data:
-        raise HTTPException(status_code=400, detail=f"Ticket not found with id: `{params.ticket_id}`")
-
-    if params.ticket_id != params.ticket.ticket_id:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Ticket id in url and body does not match. Ticket id in url: `{params.ticket_id}`, Ticket id in body: `{params.ticket.ticket_id}`",
-        )
-
-    ticket = PostTicket(**ticket_data)
-    ticket.update(**params.ticket.model_dump())
-    return await client.update_one(collection, query={"ticket_id": params.ticket_id}, update=ticket.model_dump())
-
-
 async def delete_ticket(params: DeleteTicketParams):
     status = await client.delete_one(collection, query={"ticket_id": params.ticket_id})
     return {"delete_status": status}
@@ -114,7 +96,9 @@ async def approve_ticket(ticket_id: str, user_id: str):
         raise HTTPException(status_code=400, detail=f"Ticket not found with id: `{ticket_id}`")
 
     if ticket_data["status"] != "pending":
-        raise HTTPException(status_code=400, detail=f"Ticket with id `{ticket_id}` is not in pending status")
+        raise HTTPException(
+            status_code=400, detail=f"Ticket with id `{ticket_id}` is not in pending status: {ticket_data['status']}"
+        )
 
     ticket_type = {
         "post_annc": PostTicket,
@@ -145,7 +129,9 @@ async def reject_ticket(ticket_id: str, user_id: str):
         raise HTTPException(status_code=400, detail=f"Ticket not found with id: `{ticket_id}`")
 
     if ticket_data["status"] != "pending":
-        raise HTTPException(status_code=400, detail=f"Ticket with id `{ticket_id}` is not in pending status")
+        raise HTTPException(
+            status_code=400, detail=f"Ticket with id `{ticket_id}` is not in pending status: {ticket_data['status']}"
+        )
 
     ticket_type = {
         "post_annc": PostTicket,
