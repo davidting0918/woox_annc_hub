@@ -4,6 +4,7 @@ import sys
 import unittest
 from datetime import datetime as dt
 
+from dotenv import load_dotenv
 from httpx import AsyncClient
 
 from app.chat_info.models import Chat, ChatType, DeleteChatInfo, UpdateChatInfo
@@ -11,11 +12,16 @@ from app.main import app
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+load_dotenv(".env.development")
+
 
 class TestChatRoutes(unittest.TestCase):
     def setUp(self):
         self.base_url = "http://127.0.0.1:8000"
         self.loop = asyncio.new_event_loop()
+        self.api_key = os.getenv("API_KEY")
+        self.api_secret = os.getenv("API_SECRET")
+        self.headers = {"X-API-KEY": self.api_key, "X-API-SECRET": self.api_secret, "Content-Type": "application/json"}
         asyncio.set_event_loop(self.loop)
 
     def tearDown(self):
@@ -32,7 +38,7 @@ class TestChatRoutes(unittest.TestCase):
                 category = ["listing", "delisting", "maintenance"]
                 chat = Chat(chat_id=chat_id, name=name, chat_type=chat_type, language=language, category=category)
                 print(f"chat: {chat.model_dump()}")
-                res = await client.post("chats/create", json=chat.model_dump())
+                res = await client.post("chats/create", json=chat.model_dump(), headers=self.headers)
 
                 self.assertEqual(res.status_code, 200, res.text)
                 data = res.json()
@@ -41,7 +47,7 @@ class TestChatRoutes(unittest.TestCase):
                 # get chat info
                 query_params = {"chat_id": chat_id}
                 print(f"query params: {query_params}")
-                res = await client.get("chats/info", params=query_params)
+                res = await client.get("chats/info", params=query_params, headers=self.headers)
                 self.assertEqual(res.status_code, 200)
                 data = res.json()
                 self.assertEqual(data["status"], 1)
@@ -59,7 +65,7 @@ class TestChatRoutes(unittest.TestCase):
                     chat_id=chat_id, language=new_language, category=new_category, label=label
                 )
                 print(f"update chat info: {update_chat_info.model_dump()}")
-                res = await client.post("chats/update", json=update_chat_info.model_dump())
+                res = await client.post("chats/update", json=update_chat_info.model_dump(), headers=self.headers)
                 self.assertEqual(res.status_code, 200)
                 data = res.json()
                 self.assertEqual(data["status"], 1)
@@ -67,7 +73,7 @@ class TestChatRoutes(unittest.TestCase):
                 # delete chat info
                 delete_chat_info = DeleteChatInfo(chat_id=chat_id)
                 print(f"delete chat info: {delete_chat_info.model_dump()}")
-                res = await client.post("chats/delete", json=delete_chat_info.model_dump())
+                res = await client.post("chats/delete", json=delete_chat_info.model_dump(), headers=self.headers)
                 self.assertEqual(res.status_code, 200)
                 data = res.json()
                 self.assertEqual(data["status"], 1)

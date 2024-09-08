@@ -4,13 +4,19 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.auth.services import verify_api_key
 from app.tickets.models import (
+    ApproveRejectParams,
     CreateTicketParams,
-    TicketAction,
+    DeleteTicketParams,
     TicketInfoParams,
     TicketStatus,
-    UpdateTicketParams,
 )
-from app.tickets.services import create_ticket, get_ticket_info, update_post_ticket
+from app.tickets.services import (
+    approve_ticket,
+    create_ticket,
+    delete_ticket,
+    get_ticket_info,
+    reject_ticket,
+)
 
 router = APIRouter(dependencies=[Depends(verify_api_key)])
 
@@ -18,7 +24,7 @@ router = APIRouter(dependencies=[Depends(verify_api_key)])
 # below is `get` endpoints
 
 # get ticket info
-@router.get("/info/")
+@router.get("/info")
 async def get_ticket_info_route(
     ticket_id: Optional[str] = None,
     creator_id: Optional[str] = None,
@@ -51,7 +57,7 @@ async def get_ticket_info_route(
 
 
 # below is `post` endpoints
-@router.post("/create/")
+@router.post("/create")
 async def create_ticket_route(params: CreateTicketParams):
     try:
         res = await create_ticket(params)
@@ -63,19 +69,37 @@ async def create_ticket_route(params: CreateTicketParams):
         raise HTTPException(status_code=500, detail=f"Error creating ticket: {e}")
 
 
-@router.post("/update/")
-async def update_ticket_router(params: UpdateTicketParams):
-    method_map = {
-        TicketAction.post_annc: update_post_ticket,
-        TicketAction.edit_annc: None,
-        TicketAction.delete_annc: None,
-        TicketAction.update_user: None,
-    }
+@router.post("/approve")
+async def approve_ticket_route(params: ApproveRejectParams):
     try:
-        res = await method_map[params.ticket_action](params)
+        res = await approve_ticket(params.ticket_id, params.user_id)
         return {
             "status": 1,
             "data": res,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error updating ticket: {e}")
+        raise HTTPException(status_code=500, detail=f"Error approving ticket: {e}")
+
+
+@router.post("/reject")
+async def reject_ticket_route(params: ApproveRejectParams):
+    try:
+        res = await reject_ticket(params.ticket_id, params.user_id)
+        return {
+            "status": 1,
+            "data": res,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error rejecting ticket: {e}")
+
+
+@router.post("/delete")
+async def delete_ticket_route(params: DeleteTicketParams):
+    try:
+        res = await delete_ticket(params)
+        return {
+            "status": 1,
+            "data": res,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting ticket: {e}")

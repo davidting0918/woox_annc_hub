@@ -79,7 +79,7 @@ class Announcement(BaseModel):
 
 
 class Ticket(TimestampModel):
-    ticket_id: str
+    ticket_id: Optional[str] = None
     action: TicketAction
     status: TicketStatus
 
@@ -151,10 +151,19 @@ class CreateTicketParams(BaseModel):
     ticket: PostTicket | EditTicket | DeleteTicket
 
 
+class DeleteTicketParams(BaseModel):
+    ticket_id: str
+
+
 class UpdateTicketParams(BaseModel):
     ticket_id: str
     ticket_action: TicketAction
     ticket: PostTicket | EditTicket | DeleteTicket
+
+
+class ApproveRejectParams(BaseModel):
+    ticket_id: str
+    user_id: str
 
 
 class TicketInfoParams(BaseModel):

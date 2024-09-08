@@ -5,11 +5,13 @@ from app.db.database import MongoClient
 from app.tickets.models import (
     CreateTicketParams,
     DeleteTicket,
+    DeleteTicketParams,
     EditTicket,
     PostTicket,
     TicketInfoParams,
-    UpdateTicketParams,
 )
+from app.users.models import User
+from app.users.services import collection as user_collection
 
 client = MongoClient(settings.db_name)
 collection = "ticket_records"
@@ -77,18 +79,72 @@ async def create_ticket(params: CreateTicketParams):
     return {"inserted_id": res}
 
 
-async def update_post_ticket(params: UpdateTicketParams):
-    # check if the ticket is already created
-    ticket_data = await client.find_one(collection, {"ticket_id": params.ticket_id, "action": "post_annc"})
-    if not ticket_data:
-        raise HTTPException(status_code=400, detail=f"Ticket not found with id: `{params.ticket_id}`")
+async def delete_ticket(params: DeleteTicketParams):
+    status = await client.delete_one(collection, query={"ticket_id": params.ticket_id})
+    return {"delete_status": status}
 
-    if params.ticket_id != params.ticket.ticket_id:
+
+async def approve_ticket(ticket_id: str, user_id: str):
+    """
+    1. check ticket_id exists
+    2. check ticket status is pending
+    3. then approve the ticket
+    """
+    query = {"ticket_id": ticket_id}
+    ticket_data = await client.find_one(collection, query)
+    if not ticket_data:
+        raise HTTPException(status_code=400, detail=f"Ticket not found with id: `{ticket_id}`")
+
+    if ticket_data["status"] != "pending":
         raise HTTPException(
-            status_code=400,
-            detail=f"Ticket id in url and body does not match. Ticket id in url: `{params.ticket_id}`, Ticket id in body: `{params.ticket.ticket_id}`",
+            status_code=400, detail=f"Ticket with id `{ticket_id}` is not in pending status: {ticket_data['status']}"
         )
 
-    ticket = PostTicket(**ticket_data)
-    ticket.update(**params.ticket.model_dump())
-    return await client.update_one(collection, query={"ticket_id": params.ticket_id}, update=ticket.model_dump())
+    ticket_type = {
+        "post_annc": PostTicket,
+        "edit_annc": EditTicket,
+        "delete_annc": DeleteTicket,
+    }
+    ticket = ticket_type[ticket_data["action"]](**ticket_data)
+    user_data = await client.find_one(user_collection, {"user_id": user_id})
+    ticket.approve(user=User(**user_data))
+
+    res = await client.update_one(
+        collection,
+        query={"ticket_id": ticket_id},
+        update=ticket.model_dump(),
+    )
+    return res
+
+
+async def reject_ticket(ticket_id: str, user_id: str):
+    """
+    1. check ticket_id exists
+    2. check ticket status is pending
+    3. then reject the ticket
+    """
+    params = {"ticket_id": ticket_id}
+    ticket_data = await client.find_one(collection, params)
+    if not ticket_data:
+        raise HTTPException(status_code=400, detail=f"Ticket not found with id: `{ticket_id}`")
+
+    if ticket_data["status"] != "pending":
+        raise HTTPException(
+            status_code=400, detail=f"Ticket with id `{ticket_id}` is not in pending status: {ticket_data['status']}"
+        )
+
+    ticket_type = {
+        "post_annc": PostTicket,
+        "edit_annc": EditTicket,
+        "delete_annc": DeleteTicket,
+    }
+    ticket = ticket_type[ticket_data["action"]](**ticket_data)
+    user_data = await client.find_one(user_collection, {"user_id": user_id})
+    ticket.reject(user=User(**user_data))
+
+    res = await client.update_one(
+        collection,
+        query={"ticket_id": ticket_id},
+        update=ticket.model_dump(),
+    )
+    return res
