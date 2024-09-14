@@ -1,19 +1,18 @@
+# app/tickets/routes.py
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.auth.services import verify_api_key
 from app.tickets.models import (
-    ApproveRejectParams,
+    ApproveRejectTicketParams,
     CreateTicketParams,
-    DeleteTicketParams,
     TicketInfoParams,
     TicketStatus,
 )
-from app.tickets.services import (
+from app.tickets.services import (  # delete_ticket,
     approve_ticket,
     create_ticket,
-    delete_ticket,
     get_ticket_info,
     reject_ticket,
 )
@@ -70,7 +69,7 @@ async def create_ticket_route(params: CreateTicketParams):
 
 
 @router.post("/approve")
-async def approve_ticket_route(params: ApproveRejectParams):
+async def approve_ticket_route(params: ApproveRejectTicketParams):
     try:
         res = await approve_ticket(params.ticket_id, params.user_id)
         return {
@@ -82,7 +81,7 @@ async def approve_ticket_route(params: ApproveRejectParams):
 
 
 @router.post("/reject")
-async def reject_ticket_route(params: ApproveRejectParams):
+async def reject_ticket_route(params: ApproveRejectTicketParams):
     try:
         res = await reject_ticket(params.ticket_id, params.user_id)
         return {
@@ -93,13 +92,14 @@ async def reject_ticket_route(params: ApproveRejectParams):
         raise HTTPException(status_code=500, detail=f"Error rejecting ticket: {e}")
 
 
-@router.post("/delete")
-async def delete_ticket_route(params: DeleteTicketParams):
-    try:
-        res = await delete_ticket(params)
-        return {
-            "status": 1,
-            "data": res,
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error deleting ticket: {e}")
+#
+# @router.post("/delete")
+# async def delete_ticket_route(params: DeleteTicketParams):
+#     try:
+#         res = await delete_ticket(params)
+#         return {
+#             "status": 1,
+#             "data": res,
+#         }
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Error deleting ticket: {e}")

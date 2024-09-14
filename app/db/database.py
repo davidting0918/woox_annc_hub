@@ -17,7 +17,8 @@ class MongoClient:
     async def insert_one(self, name: str, document: dict) -> str:
         collection = self.get_collection(name)
         result = await collection.insert_one(document)
-        return str(result.inserted_id)
+        if str(result.inserted_id):
+            return await self.find_one(name, {"_id": result.inserted_id})
 
     async def find_one(self, name: str, query: Dict[str, Any]) -> Dict[str, Any]:
         collection: Collection = self.get_collection(name)

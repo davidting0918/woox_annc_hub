@@ -288,4 +288,62 @@ async def test_delete_chat(test_client, auth_headers, clean_db):
 # Ticket related test
 @pytest.mark.asyncio
 async def test_create_post_ticket(test_client, auth_headers, clean_db):
+    post_ticket_data = {
+        "action": "post_annc",
+        "ticket": {
+            "creator_id": "test_user_id",
+            "creator_name": "Test User",
+        },
+    }
+    res = await test_client.post("/tickets/create", json=post_ticket_data, headers=auth_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == 1
+    assert "data" in data
+    return
+
+
+@pytest.mark.asyncio
+async def test_approve_ticket(test_client, auth_headers, clean_db):
+    """
+    1. create a test user and a post ticket
+    2. approve with the test user
+    """
+    user_data = {"user_id": "approver_user_id", "name": "Approver User", "admin": False, "whitelist": False}
+    res = await test_client.post("/users/create", json=user_data, headers=auth_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == 1
+    assert "data" in data
+
+    post_ticket_data = {
+        "action": "post_annc",
+        "ticket": {
+            "creator_id": "test_user_id",
+            "creator_name": "Test User",
+        },
+    }
+    res = await test_client.post("/tickets/create", json=post_ticket_data, headers=auth_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == 1
+    assert "data" in data
+    assert data["data"]["ticket_id"]
+    assert data["data"]["status"] == "pending"
+    assert data["data"]["action"] == "post_annc"
+
+    ticket_id = data["data"]["ticket_id"]
+    approve_data = {
+        "ticket_id": ticket_id,
+        "user_id": "approver_user_id",
+    }
+    res = await test_client.post("/tickets/approve", json=approve_data, headers=auth_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == 1
+    assert "data" in data
+    assert data["data"]["ticket_id"] == ticket_id
+    assert data["data"]["status"] == "approved"
+    assert data["data"]["approver_id"] == "approver_user_id"
+    assert data["data"]["approver_name"] == "Approver User"
     return

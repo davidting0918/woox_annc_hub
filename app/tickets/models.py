@@ -1,3 +1,4 @@
+# app/tickets/models.py
 import uuid
 from datetime import datetime as dt
 from enum import Enum
@@ -104,6 +105,31 @@ class PostTicket(Ticket):
             self.ticket_id = f"POST-{self._id}"
 
 
+class EditTicket(Ticket):
+    # set inherited fields
+    action: TicketAction = TicketAction.edit_annc
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if not self.ticket_id:
+            self.ticket_id = f"EDIT-{self._id}"
+
+
+class DeleteTicket(Ticket):
+    # set inherited fields
+    action: TicketAction = TicketAction.delete_annc
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if not self.ticket_id:
+            self.ticket_id = f"DELETE-{self._id}"
+
+
+class CreateTicketParams(BaseModel):
+    action: TicketAction
+    ticket: Dict
+
+
 class TicketInfoParams(BaseModel):
     ticket_id: Optional[str] = None
     creator_id: Optional[str] = None
@@ -114,3 +140,8 @@ class TicketInfoParams(BaseModel):
     status: Optional[TicketStatus] = None
     action: Optional[TicketAction] = None
     num: Optional[int] = None
+
+
+class ApproveRejectTicketParams(BaseModel):
+    ticket_id: str
+    user_id: str

@@ -13,8 +13,7 @@ async def create_chat(chat: Chat):
     if res:
         raise HTTPException(status_code=400, detail=f"Chat already exists with id `{chat.chat_id}`")
 
-    res = await client.insert_one(collection, chat.model_dump())
-    return res
+    return await client.insert_one(collection, chat.model_dump())
 
 
 async def get_chat_info(params: ChatInfoParams):

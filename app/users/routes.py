@@ -64,3 +64,6 @@ async def update_user_info_route(params: UpdateUsersInfoParams = Body(...)):
         return {"status": 1, "data": res}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error updating permission: {str(e)}")
+
+
+# TODO: 1. add is_whitelist 2. add is_admin

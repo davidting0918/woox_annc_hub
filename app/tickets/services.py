@@ -1,3 +1,4 @@
+# app/tickets/services.py
 from fastapi import HTTPException
 
 from app.config.setting import settings as s
@@ -5,9 +6,9 @@ from app.db.database import MongoClient
 from app.tickets.models import (
     CreateTicketParams,
     DeleteTicket,
-    DeleteTicketParams,
     EditTicket,
     PostTicket,
+    TicketAction,
     TicketInfoParams,
 )
 from app.users.models import User
@@ -62,21 +63,25 @@ async def get_ticket_info(params: TicketInfoParams):
 
 # Below is post endpoints related functions
 async def create_ticket(params: CreateTicketParams):
-    ticket = params.ticket
+
+    ticket_type = {
+        TicketAction.post_annc: PostTicket,
+        TicketAction.edit_annc: EditTicket,
+        TicketAction.delete_annc: DeleteTicket,
+    }
+    ticket = ticket_type[params.action](**params.ticket)
 
     # first check if the ticket is already created
     res = await client.find_one(collection, {"ticket_id": ticket.ticket_id})
     if res:
         raise HTTPException(status_code=400, detail=f"Ticket already created with id: `{ticket.ticket_id}`")
 
-    res = await client.insert_one(collection, ticket.model_dump())
-
-    return {"inserted_id": res}
+    return await client.insert_one(collection, ticket.model_dump())
 
 
-async def delete_ticket(params: DeleteTicketParams):
-    status = await client.delete_one(collection, query={"ticket_id": params.ticket_id})
-    return {"delete_status": status}
+# async def delete_ticket(params: DeleteTicketParams):
+#     status = await client.delete_one(collection, query={"ticket_id": params.ticket_id})
+#     return {"delete_status": status}
 
 
 async def approve_ticket(ticket_id: str, user_id: str):
