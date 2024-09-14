@@ -4,10 +4,10 @@ from fastapi import HTTPException, Security
 from fastapi.security.api_key import APIKeyHeader
 
 from app.auth.models import APIKey
-from app.config.setting import settings
+from app.config.setting import settings as s
 from app.db.database import MongoClient
 
-client = MongoClient(settings.db_name)
+client = MongoClient(s.dev_db if s.is_test else s.prod_db)
 collections = "keys"
 
 API_KEY_HEADER = APIKeyHeader(name="X-API-KEY")

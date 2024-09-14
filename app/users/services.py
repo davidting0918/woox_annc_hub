@@ -2,7 +2,7 @@
 
 from fastapi import HTTPException
 
-from app.config.setting import settings
+from app.config.setting import settings as s
 from app.db.database import MongoClient
 from app.users.models import (
     DeleteUserParams,
@@ -11,7 +11,7 @@ from app.users.models import (
     UserInfoParams,
 )
 
-client = MongoClient(settings.db_name)
+client = MongoClient(s.dev_db if s.is_test else s.prod_db)
 collection = "permission"
 
 

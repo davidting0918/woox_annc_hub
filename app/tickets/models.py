@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime as dt
 from enum import Enum
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -29,9 +29,6 @@ class TicketStatus(str, Enum):
     rejected = "rejected"
 
 
-# Shared models
-
-
 class TimestampModel(BaseModel):
     created_timestamp: int = Field(default_factory=lambda: int(dt.now().timestamp() * 1000))
     updated_timestamp: int = Field(default_factory=lambda: int(dt.now().timestamp() * 1000))
@@ -43,45 +40,14 @@ class TimestampModel(BaseModel):
     def update(self, **kwargs):
         for key, value in kwargs.items():
             if hasattr(self, key) and value is not None:
-                if key == "annc":
-                    setattr(self, key, Announcement(**value))
-                    continue
-
                 setattr(self, key, value)
         self.updated_timestamp = int(dt.now().timestamp() * 1000)
-
-
-class Announcement(BaseModel):
-
-    # define content related fields
-    annc_type: Optional[AnncType] = None
-    content_text: Optional[str] = None
-    content_html: Optional[str] = None
-    content_md: Optional[str] = None
-    file_id: Optional[str] = None
-
-    # define chats related fields
-    category: Optional[str] = None
-    language: Optional[str] = None
-    label: Optional[List[str]] = None
-    chats: List[str] = Field(default_factory=list)  # values should be chat_id
-    actual_chats: List[str] = Field(default_factory=list)  # values should be chat_id
-
-    @property
-    def annc_id(self):
-        return f"ANN-{uuid.uuid4().hex}"
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    def post(self):
-        pass
 
 
 class Ticket(TimestampModel):
     ticket_id: Optional[str] = None
     action: TicketAction
-    status: TicketStatus
+    status: TicketStatus = TicketStatus.pending
 
     # user related fields
     creator_id: str  # fixed when created, using user_id from telegram
@@ -111,59 +77,31 @@ class Ticket(TimestampModel):
 
 
 class PostTicket(Ticket):
-    annc: Announcement
+    # set inherited fields
+    action: TicketAction = TicketAction.post_annc
+
+    # announcement related field
+    annc_type: Optional[AnncType] = None
+    content_text: Optional[str] = None
+    content_html: Optional[str] = None
+    content_md: Optional[str] = None
+    file_path: Optional[str] = None
+
+    # define chats related fields
+    category: Optional[str] = None
+    language: Optional[str] = None
+    label: Optional[List[str]] = None
+
+    # values should be {"chat_id": chat_id, "chat_name": chat_name}
+    chats: List[Dict] = Field(default_factory=list)
+
+    # values should be {"chat_id": chat_id, "chat_name": chat_name, "message_id": message_id}
+    actual_chats: List[Dict] = Field(default_factory=list)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         if not self.ticket_id:
             self.ticket_id = f"POST-{self._id}"
-        if not self.status:
-            self.status = TicketStatus.pending
-        self.action = TicketAction.post_annc
-
-
-class EditTicket(Ticket):
-    old_annc: Announcement
-    new_annc: Announcement
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        if not self.ticket_id:
-            self.ticket_id = f"EDIT-{self._id}"
-        if not self.status:
-            self.status = TicketStatus.pending
-        self.action = TicketAction.edit_annc
-
-
-class DeleteTicket(Ticket):
-    annc: Announcement
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        if not self.ticket_id:
-            self.ticket_id = f"DELETE-{self._id}"
-        if not self.status:
-            self.status = TicketStatus.pending
-        self.action = TicketAction.delete_annc
-
-
-class CreateTicketParams(BaseModel):
-    ticket: PostTicket | EditTicket | DeleteTicket
-
-
-class DeleteTicketParams(BaseModel):
-    ticket_id: str
-
-
-class UpdateTicketParams(BaseModel):
-    ticket_id: str
-    ticket_action: TicketAction
-    ticket: PostTicket | EditTicket | DeleteTicket
-
-
-class ApproveRejectParams(BaseModel):
-    ticket_id: str
-    user_id: str
 
 
 class TicketInfoParams(BaseModel):

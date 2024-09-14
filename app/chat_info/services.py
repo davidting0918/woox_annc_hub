@@ -1,10 +1,10 @@
 from fastapi import HTTPException
 
 from app.chat_info.models import Chat, ChatInfoParams, DeleteChatInfo, UpdateChatInfo
-from app.config.setting import settings
+from app.config.setting import settings as s
 from app.db.database import MongoClient
 
-client = MongoClient(settings.db_name)
+client = MongoClient(s.dev_db if s.is_test else s.prod_db)
 collection = "chat_info"
 
 
@@ -25,10 +25,10 @@ async def get_chat_info(params: ChatInfoParams):
         and logic will be `OR` between params and `AND` within each param
     """
     if params.chat_id:
-        return await client.find_one(collection, query={"chat_id": params.chat_id})
+        return [await client.find_one(collection, query={"chat_id": params.chat_id})]
 
     if params.name:
-        return await client.find_one(collection, query={"name": params.name})
+        return [await client.find_one(collection, query={"name": params.name})]
 
     query = {}
     if params.chat_type:

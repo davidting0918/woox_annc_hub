@@ -6,7 +6,7 @@ import pandas as pd
 from app.config.setting import settings
 from app.db.database import MongoClient
 
-new_db_client = MongoClient(settings.db_name)
+new_db_client = MongoClient(settings.prod_db_name)
 old_db_client = MongoClient("AnnouncementDB")
 
 

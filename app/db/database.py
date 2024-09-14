@@ -55,5 +55,10 @@ class MongoClient:
         result = await collection.delete_one(query)
         return result.deleted_count > 0
 
+    async def delete_many(self, name: str, query: Dict[str, Any]) -> bool:
+        collection: Collection = self.get_collection(name)
+        result = await collection.delete_many(query)
+        return result.deleted_count > 0
+
     async def close(self):
         self.client.close()
