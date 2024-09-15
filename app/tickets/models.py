@@ -5,7 +5,9 @@ from enum import Enum
 from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
+from telegram import Bot
 
+from app.config.setting import settings as s
 from app.users.models import User
 
 
@@ -76,6 +78,9 @@ class Ticket(TimestampModel):
         }
         self.update(**params)
 
+    async def execute(self, **kwargs):
+        raise NotImplementedError
+
 
 class PostTicket(Ticket):
     # set inherited fields
@@ -104,6 +109,10 @@ class PostTicket(Ticket):
         if not self.ticket_id:
             self.ticket_id = f"POST-{self._id}"
 
+    async def execute(self):
+        bot = Bot(token=s.event_bot_token)
+        return bot
+
 
 class EditTicket(Ticket):
     # set inherited fields
@@ -114,6 +123,9 @@ class EditTicket(Ticket):
         if not self.ticket_id:
             self.ticket_id = f"EDIT-{self._id}"
 
+    async def execute(self):
+        return
+
 
 class DeleteTicket(Ticket):
     # set inherited fields
@@ -123,6 +135,9 @@ class DeleteTicket(Ticket):
         super().__init__(**kwargs)
         if not self.ticket_id:
             self.ticket_id = f"DELETE-{self._id}"
+
+    async def execute(self):
+        return
 
 
 class CreateTicketParams(BaseModel):

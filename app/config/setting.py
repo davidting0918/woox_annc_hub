@@ -6,6 +6,8 @@ class Settings(BaseSettings):
     mongo_db_url: str
     prod_db: str
     dev_db: str
+    command_bot_token: str
+    event_bot_token: str
     is_test: bool = False
 
     model_config = ConfigDict(env_file=".env", env_file_encoding="utf-8")

@@ -108,8 +108,10 @@ async def approve_ticket(ticket_id: str, user_id: str):
     }
     ticket = ticket_type[ticket_data["action"]](**ticket_data)
     user_data = await client.find_one(user_collection, {"user_id": user_id})
-    # TODO: add execution code 1. sending message using python-telegram-bot 2. edit message
-    ticket.approve(user=User(**user_data))
+    try:
+        ticket.approve(user=User(**user_data))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error approving ticket: {str(e)}")
 
     res = await client.update_one(
         collection,
