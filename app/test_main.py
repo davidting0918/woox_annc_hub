@@ -51,7 +51,7 @@ def event_loop():
 
 
 # User related endpoint
-@pytest.mark.asyncio(loop_scope="function")
+@pytest.mark.asyncio
 async def test_create_user(test_client, auth_headers, clean_db):
     user_data = {"user_id": "test_user_id", "name": "Test User", "admin": False, "whitelist": False}
     res = await test_client.post("/users/create", json=user_data, headers=auth_headers)
@@ -62,7 +62,53 @@ async def test_create_user(test_client, auth_headers, clean_db):
     return
 
 
-@pytest.mark.asyncio(loop_scope="function")
+@pytest.mark.asyncio
+async def test_check_permission_function(test_client, auth_headers, clean_db):
+    user_data = {"user_id": "test_user_id", "name": "Test User", "admin": False, "whitelist": False}
+    res = await test_client.post("/users/create", json=user_data, headers=auth_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == 1
+    assert "data" in data
+
+    res = await test_client.get("/users/in_whitelist", params={"user_id": "test_user_id"}, headers=auth_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == 1
+    assert "data" in data
+    assert data["data"] is False
+
+    res = await test_client.get("/users/is_admin", params={"user_id": "test_user_id"}, headers=auth_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == 1
+    assert "data" in data
+    assert data["data"] is False
+
+    update_user_data = {"user_id": "test_user_id", "admin": True, "whitelist": True}
+    res = await test_client.post("/users/update", json=update_user_data, headers=auth_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == 1
+    assert "data" in data
+
+    res = await test_client.get("/users/in_whitelist", params={"user_id": "test_user_id"}, headers=auth_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == 1
+    assert "data" in data
+    assert data["data"]
+
+    res = await test_client.get("/users/is_admin", params={"user_id": "test_user_id"}, headers=auth_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == 1
+    assert "data" in data
+    assert data["data"]
+    return
+
+
+@pytest.mark.asyncio
 async def test_update_user_info(test_client, auth_headers, clean_db):
     # create a new user
     user_data = {"user_id": "test_user_id", "name": "Test User", "admin": False, "whitelist": False}

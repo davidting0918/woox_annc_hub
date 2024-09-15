@@ -43,3 +43,13 @@ async def update_users_info(params: UpdateUsersInfoParams):
 async def delete_user(params: DeleteUserParams):
     status = await client.delete_one(collection, query={"user_id": params.user_id})
     return {"delete_status": status}
+
+
+async def in_whitelist(user_id: str):
+    user_data = await client.find_one(collection, query={"user_id": user_id})
+    return user_data.get("whitelist", False) if user_data else False
+
+
+async def is_admin(user_id: str):
+    user_data = await client.find_one(collection, query={"user_id": user_id})
+    return user_data.get("admin", False) if user_data else False
