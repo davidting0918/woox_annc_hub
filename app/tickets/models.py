@@ -130,6 +130,10 @@ class CreateTicketParams(BaseModel):
     ticket: Dict
 
 
+class DeleteTicketParams(BaseModel):
+    ticket_id: str
+
+
 class TicketInfoParams(BaseModel):
     ticket_id: Optional[str] = None
     creator_id: Optional[str] = None

@@ -393,3 +393,32 @@ async def test_approve_ticket(test_client, auth_headers, clean_db):
     assert data["data"]["approver_id"] == "approver_user_id"
     assert data["data"]["approver_name"] == "Approver User"
     return
+
+
+@pytest.mark.asyncio
+async def test_delete_ticket(test_client, auth_headers, clean_db):
+    post_ticket_data = {
+        "action": "post_annc",
+        "ticket": {
+            "creator_id": "test_user_id",
+            "creator_name": "Test User",
+        },
+    }
+    res = await test_client.post("/tickets/create", json=post_ticket_data, headers=auth_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == 1
+    assert "data" in data
+    assert data["data"]["ticket_id"]
+    assert data["data"]["status"] == "pending"
+    assert data["data"]["action"] == "post_annc"
+
+    ticket_id = data["data"]["ticket_id"]
+    delete_data = {"ticket_id": ticket_id}
+    res = await test_client.post("/tickets/delete", json=delete_data, headers=auth_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == 1
+    assert "data" in data
+    assert data["data"]["delete_status"]
+    return

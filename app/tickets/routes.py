@@ -7,12 +7,14 @@ from app.auth.services import verify_api_key
 from app.tickets.models import (
     ApproveRejectTicketParams,
     CreateTicketParams,
+    DeleteTicketParams,
     TicketInfoParams,
     TicketStatus,
 )
 from app.tickets.services import (  # delete_ticket,
     approve_ticket,
     create_ticket,
+    delete_ticket,
     get_ticket_info,
     reject_ticket,
 )
@@ -92,14 +94,13 @@ async def reject_ticket_route(params: ApproveRejectTicketParams):
         raise HTTPException(status_code=500, detail=f"Error rejecting ticket: {e}")
 
 
-#
-# @router.post("/delete")
-# async def delete_ticket_route(params: DeleteTicketParams):
-#     try:
-#         res = await delete_ticket(params)
-#         return {
-#             "status": 1,
-#             "data": res,
-#         }
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Error deleting ticket: {e}")
+@router.post("/delete")
+async def delete_ticket_route(params: DeleteTicketParams):
+    try:
+        res = await delete_ticket(params)
+        return {
+            "status": 1,
+            "data": res,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting ticket: {e}")
