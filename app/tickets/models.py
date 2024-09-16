@@ -1,14 +1,24 @@
 # app/tickets/models.py
+import asyncio
+import time
 import uuid
 from datetime import datetime as dt
 from enum import Enum
 from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
-from telegram import Bot
+from telegram import Bot, request
+from telegram.error import TelegramError
 
 from app.config.setting import settings as s
 from app.users.models import User
+
+
+class EventBot(Bot):
+    REQUEST = request.HTTPXRequest(connection_pool_size=50000, connect_timeout=300, read_timeout=300)
+
+    def __init__(self, **kwargs):
+        super().__init__(request=self.REQUEST, **kwargs)
 
 
 # Enum definitions
@@ -60,13 +70,17 @@ class Ticket(TimestampModel):
 
     status_changed_timestamp: Optional[int] = None
 
-    def approve(self, user: User):
-        params = {
-            "approver_id": user.user_id,
-            "approver_name": user.name,
-            "status": TicketStatus.approved,
-            "status_changed_timestamp": int(dt.now().timestamp() * 1000),
-        }
+    async def approve(self, user: User):
+        params = await self.execute()
+        params.update(
+            {
+                "approver_id": user.user_id,
+                "approver_name": user.name,
+                "status": TicketStatus.approved,
+                "status_changed_timestamp": int(dt.now().timestamp() * 1000),
+            }
+        )
+
         self.update(**params)
 
     def reject(self, user: User):
@@ -78,7 +92,7 @@ class Ticket(TimestampModel):
         }
         self.update(**params)
 
-    async def execute(self, **kwargs):
+    async def execute(self):
         raise NotImplementedError
 
 
@@ -101,8 +115,11 @@ class PostTicket(Ticket):
     # values should be {"chat_id": chat_id, "chat_name": chat_name}
     chats: List[Dict] = Field(default_factory=list)
 
-    # values should be {"chat_id": chat_id, "chat_name": chat_name, "message_id": message_id}
-    actual_chats: List[Dict] = Field(default_factory=list)
+    # values should be {"chat_id": chat_id, "chat_name": chat_name, "message_id": message_id, "status": status}
+    success_chats: List[Dict] = Field(default_factory=list)
+
+    # values should be {"chat_id": chat_id, "chat_name": chat_name, "status": status, "error": error}
+    failed_chats: List[Dict] = Field(default_factory=list)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -110,8 +127,45 @@ class PostTicket(Ticket):
             self.ticket_id = f"POST-{self._id}"
 
     async def execute(self):
-        bot = Bot(token=s.event_bot_token)
-        return bot
+        async def send_message(chat):
+            try:
+                send_function = function_map[self.annc_type]
+                if self.annc_type == "text":
+                    message = await send_function(
+                        chat_id=chat["chat_id"], text=self.content_md, parse_mode="MarkdownV2"
+                    )
+                else:
+                    message = await send_function(
+                        chat_id=chat["chat_id"], file=self.file_path, caption=self.content_md, parse_mode="MarkdownV2"
+                    )
+                return {
+                    "chat_id": str(message.chat.id),
+                    "chat_name": str(message.chat.title),
+                    "message_id": str(message.message_id),
+                    "status": True,
+                }
+            except TelegramError as e:
+                return {"chat_id": chat["chat_id"], "chat_name": chat["chat_name"], "status": False, "error": str(e)}
+
+        bot = EventBot(token=s.event_bot_token)
+        function_map = {
+            AnncType.text: bot.send_message,
+            AnncType.image: bot.send_photo,
+            AnncType.video: bot.send_video,
+            AnncType.file: bot.send_document,
+        }
+
+        batch_size = 50
+        results = []
+        for i in range(0, len(self.chats), batch_size):
+            batch = self.chats[i : i + batch_size]
+            batch_results = await asyncio.gather(*[send_message(chat) for chat in batch])
+            results.extend(batch_results)
+            time.sleep(1)
+
+        success_chats = [result for result in results if result["status"]]
+        failed_chats = [result for result in results if not result["status"]]
+        return {"success_chats": success_chats, "failed_chats": failed_chats}
 
 
 class EditTicket(Ticket):

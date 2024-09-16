@@ -108,8 +108,10 @@ async def approve_ticket(ticket_id: str, user_id: str):
     }
     ticket = ticket_type[ticket_data["action"]](**ticket_data)
     user_data = await client.find_one(user_collection, {"user_id": user_id})
+    if not user_data["admin"]:
+        raise HTTPException(status_code=400, detail=f"User with id `{user_id}` is not admin")
     try:
-        ticket.approve(user=User(**user_data))
+        await ticket.approve(user=User(**user_data))
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error approving ticket: {str(e)}")
 
@@ -144,6 +146,8 @@ async def reject_ticket(ticket_id: str, user_id: str):
     }
     ticket = ticket_type[ticket_data["action"]](**ticket_data)
     user_data = await client.find_one(user_collection, {"user_id": user_id})
+    if not user_data["admin"]:
+        raise HTTPException(status_code=400, detail=f"User with id `{user_id}` is not admin")
     ticket.reject(user=User(**user_data))
 
     res = await client.update_one(
