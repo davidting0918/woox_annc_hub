@@ -17,6 +17,7 @@ from app.tickets.services import (  # delete_ticket,
     delete_ticket,
     get_ticket_info,
     reject_ticket,
+    update_ticket_dashboard,
 )
 
 router = APIRouter(dependencies=[Depends(verify_api_key)])
@@ -55,6 +56,15 @@ async def get_ticket_info_route(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting ticket info: {e}")
+
+
+@router.get("/update_dashboard")
+async def update_dashboard_route(direction: str):
+    try:
+        res = await update_ticket_dashboard(direction)
+        return {"status": 1, "data": res}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating ticket dashboard: {e}")
 
 
 # below is `post` endpoints

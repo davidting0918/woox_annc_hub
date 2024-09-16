@@ -16,6 +16,7 @@ from app.users.services import (
     in_whitelist,
     is_admin,
     list_users_info,
+    update_user_dashboard,
     update_users_info,
 )
 
@@ -56,6 +57,15 @@ async def is_admin_route(user_id: str):
         return {"status": 1, "data": res}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error checking admin: {str(e)}")
+
+
+@router.get("/udpate_dashboard")
+async def update_dashboard_route():
+    try:
+        res = await update_user_dashboard()
+        return {"status": 1, "data": res}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating dashboard: {str(e)}")
 
 
 # below are post routes

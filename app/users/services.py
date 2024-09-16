@@ -53,3 +53,11 @@ async def in_whitelist(user_id: str):
 async def is_admin(user_id: str):
     user_data = await client.find_one(collection, query={"user_id": user_id})
     return user_data.get("admin", False) if user_data else False
+
+
+async def update_user_dashboard():
+    """
+    This function will udpate the current permission table to the google sheet and only include either admin or whitelist users.
+    If both is false, then the user will not be updated to the table
+    """
+    return

@@ -8,6 +8,7 @@ from app.chat_info.services import (
     create_chat,
     delete_chat,
     get_chat_info,
+    update_chat_dashboard,
     update_chat_info,
 )
 
@@ -34,6 +35,15 @@ async def get_chat_info_route(
         return {"status": 1, "data": res}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting chat info: {str(e)}, params: {params.model_dump()}")
+
+
+@router.get("update_dashboard")
+async def update_dashboard_route(direction: str):
+    try:
+        res = await update_chat_dashboard(direction)
+        return {"status": 1, "data": res}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating chat dashboard: {str(e)}")
 
 
 # below are post routes

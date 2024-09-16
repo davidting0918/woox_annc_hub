@@ -156,3 +156,7 @@ async def reject_ticket(ticket_id: str, user_id: str):
         update=ticket.model_dump(),
     )
     return res
+
+
+async def update_ticket_dashboard():
+    return

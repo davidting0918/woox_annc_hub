@@ -56,3 +56,12 @@ async def delete_chat(params: DeleteChatInfo):
     status = await client.delete_one(collection, query={"chat_id": params.chat_id})
 
     return {"delete_status": status}
+
+
+async def update_chat_dashboard(direction: str = "pull"):
+    """
+    This function will pull or push chat info to the google sheet,
+    1. push is using when chat name, chat type, new chat created, deleted chat status changed
+    2. pull is using whenever a user request to create a ticket, udpate the category, language, label on the dashboard to mongodb
+    """
+    return
