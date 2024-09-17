@@ -59,7 +59,7 @@ async def is_admin_route(user_id: str):
         raise HTTPException(status_code=500, detail=f"Error checking admin: {str(e)}")
 
 
-@router.get("/udpate_dashboard")
+@router.get("/update_dashboard")
 async def update_dashboard_route():
     try:
         res = await update_user_dashboard()

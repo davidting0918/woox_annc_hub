@@ -532,3 +532,27 @@ async def test_execute_post_ticket(test_client, auth_headers, clean_db):
     assert len(data["data"]["success_chats"]) == len(chats_data)
     assert len(data["data"]["failed_chats"]) == len(error_chats_data)
     return
+
+
+# test update dashboard information part
+@pytest.mark.asyncio
+async def test_update_user_dashboard_info(test_client, auth_headers, clean_db):
+    """
+    1. create 5 users
+    2. update dashboard
+    """
+    for i in range(5):
+        user_data = {"user_id": f"test_user_id_{i}", "name": f"Test User {i}", "admin": True, "whitelist": True}
+        res = await test_client.post("/users/create", json=user_data, headers=auth_headers)
+        assert res.status_code == 200
+        data = res.json()
+        assert data["status"] == 1
+        assert "data" in data
+
+    res = await test_client.get("/users/update_dashboard", headers=auth_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == 1
+    assert "data" in data
+    assert len(data["data"]) == 5
+    return
