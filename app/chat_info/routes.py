@@ -37,7 +37,7 @@ async def get_chat_info_route(
         raise HTTPException(status_code=500, detail=f"Error getting chat info: {str(e)}, params: {params.model_dump()}")
 
 
-@router.get("update_dashboard")
+@router.get("/update_dashboard")
 async def update_dashboard_route(direction: str):
     try:
         res = await update_chat_dashboard(direction)

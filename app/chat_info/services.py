@@ -1,11 +1,14 @@
+import pandas as pd
 from fastapi import HTTPException
 
 from app.chat_info.models import Chat, ChatInfoParams, DeleteChatInfo, UpdateChatInfo
 from app.config.setting import settings as s
+from app.db.dashboard import GCClient
 from app.db.database import MongoClient
 
 client = MongoClient(s.dev_db if s.is_test else s.prod_db)
 collection = "chat_info"
+gc_client = GCClient()
 
 
 async def create_chat(chat: Chat):
@@ -58,10 +61,22 @@ async def delete_chat(params: DeleteChatInfo):
     return {"delete_status": status}
 
 
-async def update_chat_dashboard(direction: str = "pull"):
+async def update_chat_dashboard(direction: str = "pull", **kwargs):
     """
     This function will pull or push chat info to the google sheet,
     1. push is using when chat name, chat type, new chat created, deleted chat status changed
-    2. pull is using whenever a user request to create a ticket, udpate the category, language, label on the dashboard to mongodb
+    2. pull is using whenever a user request to create a ticket, update the category, language, label on the dashboard to mongodb
     """
-    return
+    if direction == "init":
+        """ """
+        dashboard_data = gc_client.get_ws(name="TG Chat Info", to_type="df").drop(columns=[""])
+        dashboard_fixed_columns_map = {"Name", "Type", "Added Time", "Labels", "Note"}
+        chat_info = pd.DataFrame(await client.find_many(collection, query={}))
+
+        return chat_info, dashboard_data, dashboard_fixed_columns_map
+    elif direction == "push":
+        return
+    elif direction == "pull":
+        return
+    else:
+        raise HTTPException(status_code=400, detail=f"Invalid direction: {direction}. Only `pull` or `push` is allowed")
