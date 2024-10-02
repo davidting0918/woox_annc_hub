@@ -1,12 +1,16 @@
 import asyncio
 
 import pytest
+from dotenv import load_dotenv
 from httpx import ASGITransport, AsyncClient
 
 from app.auth.services import create_api_key
 from app.config.setting import Settings
+from app.db.dashboard import GCClient
 from app.db.database import MongoClient
 from app.main import create_app
+
+load_dotenv()
 
 
 @pytest.fixture
@@ -559,7 +563,7 @@ async def test_update_user_dashboard_info(test_client, auth_headers, clean_db):
 
 
 # test update chat info dashboard
-async def test_update_chat_info_dashboard(test_client, auth_headers, clean_db):
+async def test_push_chat_info_dashboard(test_client, auth_headers, clean_db):
     """
     1. create 5 chats
     2. update dashboard
@@ -570,7 +574,7 @@ async def test_update_chat_info_dashboard(test_client, auth_headers, clean_db):
             "name": f"Test Chat {i}",
             "chat_type": "group",
             "language": ["en"],
-            "category": ["test_channel"],
+            "category": [f"test_channel_{i}", f"test_channel_{i+1}"],
             "label": ["test_label_1", "test_label_2", "test_label_3"],
         }
         res = await test_client.post("/chats/create", json=chat_data, headers=auth_headers)
@@ -579,12 +583,62 @@ async def test_update_chat_info_dashboard(test_client, auth_headers, clean_db):
         assert data["status"] == 1
         assert "data" in data
 
-    res = await test_client.get(
-        "/chats/update_dashboard", headers=auth_headers, params={"direction": "init", "init_category": []}
-    )
+    res = await test_client.get("/chats/update_dashboard", headers=auth_headers, params={"direction": "push"})
     assert res.status_code == 200
     data = res.json()
     assert data["status"] == 1
     assert "data" in data
     assert len(data["data"]) == 5
+    return
+
+
+@pytest.mark.asyncio
+async def test_pull_chat_info_dashboard(test_client, auth_headers, clean_db):
+    """
+    THis test will test to add a new category after pushing the chat info data.
+    1. create 10 chats and push the data to the dashboard
+    2. use the pygsheet to add a new category to the db
+    3. run pull dashboard to update the dashboard
+    4. use get chat info to test whether the new category is added or not
+    """
+    chat_num = 10
+    for i in range(chat_num):
+        chat_data = {
+            "chat_id": f"test_chat_id_{i}",
+            "name": f"Test Chat {i}",
+            "chat_type": "group",
+            "language": ["en"],
+            "category": [f"test_channel_{i}", f"test_channel_{i+1}"],
+            "label": ["test_label_1", "test_label_2", "test_label_3"],
+        }
+        res = await test_client.post("/chats/create", json=chat_data, headers=auth_headers)
+        assert res.status_code == 200
+        data = res.json()
+        assert data["status"] == 1
+        assert "data" in data
+
+    res = await test_client.get("/chats/update_dashboard", headers=auth_headers, params={"direction": "push"})
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == 1
+    assert "data" in data
+    assert len(data["data"]) == chat_num
+
+    gc_client = GCClient()
+    ws = gc_client.get_ws("TG Chat Info", to_type="ws")
+    chat_info = ws.get_as_df()
+    chat_info["New Pull Category"] = "V"
+    chat_info["Description"] = ""
+    chat_info["Label"] = "New Pull Label 1, New Pull Label 2"
+    ws.clear()
+    ws.set_dataframe(chat_info, (1, 1))
+
+    res = await test_client.get("/chats/update_dashboard", headers=auth_headers, params={"direction": "pull"})
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == 1
+    assert "data" in data
+    assert len(data["data"]) == chat_num
+    assert "new_pull_category" in data["data"][0]["category"]
+    assert "new_pull_label_1" in data["data"][0]["label"]
     return
