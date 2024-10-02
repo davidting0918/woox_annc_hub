@@ -13,7 +13,10 @@ from app.users.models import (
 from app.users.services import (
     create_user,
     delete_user,
+    in_whitelist,
+    is_admin,
     list_users_info,
+    update_user_dashboard,
     update_users_info,
 )
 
@@ -36,6 +39,33 @@ async def get_users_info(
         return {"status": 1, "data": res}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting user info: {str(e)}")
+
+
+@router.get("/in_whitelist")
+async def in_whitelist_route(user_id: str):
+    try:
+        res = await in_whitelist(user_id)
+        return {"status": 1, "data": res}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error checking whitelist: {str(e)}")
+
+
+@router.get("/is_admin")
+async def is_admin_route(user_id: str):
+    try:
+        res = await is_admin(user_id)
+        return {"status": 1, "data": res}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error checking admin: {str(e)}")
+
+
+@router.get("/update_dashboard")
+async def update_dashboard_route():
+    try:
+        res = await update_user_dashboard()
+        return {"status": 1, "data": res}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating dashboard: {str(e)}")
 
 
 # below are post routes

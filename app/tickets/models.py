@@ -1,11 +1,24 @@
+# app/tickets/models.py
+import asyncio
+import time
 import uuid
 from datetime import datetime as dt
 from enum import Enum
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
+from telegram import Bot, request
+from telegram.error import TelegramError
 
+from app.config.setting import settings as s
 from app.users.models import User
+
+
+class EventBot(Bot):
+    REQUEST = request.HTTPXRequest(connection_pool_size=50000, connect_timeout=300, read_timeout=300)
+
+    def __init__(self, **kwargs):
+        super().__init__(request=self.REQUEST, **kwargs)
 
 
 # Enum definitions
@@ -29,9 +42,6 @@ class TicketStatus(str, Enum):
     rejected = "rejected"
 
 
-# Shared models
-
-
 class TimestampModel(BaseModel):
     created_timestamp: int = Field(default_factory=lambda: int(dt.now().timestamp() * 1000))
     updated_timestamp: int = Field(default_factory=lambda: int(dt.now().timestamp() * 1000))
@@ -43,45 +53,14 @@ class TimestampModel(BaseModel):
     def update(self, **kwargs):
         for key, value in kwargs.items():
             if hasattr(self, key) and value is not None:
-                if key == "annc":
-                    setattr(self, key, Announcement(**value))
-                    continue
-
                 setattr(self, key, value)
         self.updated_timestamp = int(dt.now().timestamp() * 1000)
-
-
-class Announcement(BaseModel):
-
-    # define content related fields
-    annc_type: Optional[AnncType] = None
-    content_text: Optional[str] = None
-    content_html: Optional[str] = None
-    content_md: Optional[str] = None
-    file_id: Optional[str] = None
-
-    # define chats related fields
-    category: Optional[str] = None
-    language: Optional[str] = None
-    label: Optional[List[str]] = None
-    chats: List[str] = Field(default_factory=list)  # values should be chat_id
-    actual_chats: List[str] = Field(default_factory=list)  # values should be chat_id
-
-    @property
-    def annc_id(self):
-        return f"ANN-{uuid.uuid4().hex}"
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    def post(self):
-        pass
 
 
 class Ticket(TimestampModel):
     ticket_id: Optional[str] = None
     action: TicketAction
-    status: TicketStatus
+    status: TicketStatus = TicketStatus.pending
 
     # user related fields
     creator_id: str  # fixed when created, using user_id from telegram
@@ -91,13 +70,17 @@ class Ticket(TimestampModel):
 
     status_changed_timestamp: Optional[int] = None
 
-    def approve(self, user: User):
-        params = {
-            "approver_id": user.user_id,
-            "approver_name": user.name,
-            "status": TicketStatus.approved,
-            "status_changed_timestamp": int(dt.now().timestamp() * 1000),
-        }
+    async def approve(self, user: User):
+        params = await self.execute()
+        params.update(
+            {
+                "approver_id": user.user_id,
+                "approver_name": user.name,
+                "status": TicketStatus.approved,
+                "status_changed_timestamp": int(dt.now().timestamp() * 1000),
+            }
+        )
+
         self.update(**params)
 
     def reject(self, user: User):
@@ -109,61 +92,115 @@ class Ticket(TimestampModel):
         }
         self.update(**params)
 
+    async def execute(self):
+        raise NotImplementedError
+
 
 class PostTicket(Ticket):
-    annc: Announcement
+    # set inherited fields
+    action: TicketAction = TicketAction.post_annc
+
+    # announcement related field
+    annc_type: Optional[AnncType] = None
+    content_text: Optional[str] = None
+    content_html: Optional[str] = None
+    content_md: Optional[str] = None
+    file_path: Optional[str] = None
+
+    # define chats related fields
+    category: Optional[str] = None
+    language: Optional[str] = None
+    label: Optional[List[str]] = None
+
+    # values should be {"chat_id": chat_id, "chat_name": chat_name}
+    chats: List[Dict] = Field(default_factory=list)
+
+    # values should be {"chat_id": chat_id, "chat_name": chat_name, "message_id": message_id, "status": status}
+    success_chats: List[Dict] = Field(default_factory=list)
+
+    # values should be {"chat_id": chat_id, "chat_name": chat_name, "status": status, "error": error}
+    failed_chats: List[Dict] = Field(default_factory=list)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         if not self.ticket_id:
             self.ticket_id = f"POST-{self._id}"
-        if not self.status:
-            self.status = TicketStatus.pending
-        self.action = TicketAction.post_annc
+
+    async def execute(self):
+        async def send_message(chat):
+            try:
+                send_function = function_map[self.annc_type]
+                if self.annc_type == "text":
+                    message = await send_function(
+                        chat_id=chat["chat_id"], text=self.content_md, parse_mode="MarkdownV2"
+                    )
+                else:
+                    message = await send_function(
+                        chat_id=chat["chat_id"], file=self.file_path, caption=self.content_md, parse_mode="MarkdownV2"
+                    )
+                return {
+                    "chat_id": str(message.chat.id),
+                    "chat_name": str(message.chat.title),
+                    "message_id": str(message.message_id),
+                    "status": True,
+                }
+            except TelegramError as e:
+                return {"chat_id": chat["chat_id"], "chat_name": chat["chat_name"], "status": False, "error": str(e)}
+
+        bot = EventBot(token=s.event_bot_token)
+        function_map = {
+            AnncType.text: bot.send_message,
+            AnncType.image: bot.send_photo,
+            AnncType.video: bot.send_video,
+            AnncType.file: bot.send_document,
+        }
+
+        batch_size = 50
+        results = []
+        for i in range(0, len(self.chats), batch_size):
+            batch = self.chats[i : i + batch_size]
+            batch_results = await asyncio.gather(*[send_message(chat) for chat in batch])
+            results.extend(batch_results)
+            time.sleep(1)
+
+        success_chats = [result for result in results if result["status"]]
+        failed_chats = [result for result in results if not result["status"]]
+        return {"success_chats": success_chats, "failed_chats": failed_chats}
 
 
 class EditTicket(Ticket):
-    old_annc: Announcement
-    new_annc: Announcement
+    # set inherited fields
+    action: TicketAction = TicketAction.edit_annc
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         if not self.ticket_id:
             self.ticket_id = f"EDIT-{self._id}"
-        if not self.status:
-            self.status = TicketStatus.pending
-        self.action = TicketAction.edit_annc
+
+    async def execute(self):
+        return
 
 
 class DeleteTicket(Ticket):
-    annc: Announcement
+    # set inherited fields
+    action: TicketAction = TicketAction.delete_annc
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         if not self.ticket_id:
             self.ticket_id = f"DELETE-{self._id}"
-        if not self.status:
-            self.status = TicketStatus.pending
-        self.action = TicketAction.delete_annc
+
+    async def execute(self):
+        return
 
 
 class CreateTicketParams(BaseModel):
-    ticket: PostTicket | EditTicket | DeleteTicket
+    action: TicketAction
+    ticket: Dict
 
 
 class DeleteTicketParams(BaseModel):
     ticket_id: str
-
-
-class UpdateTicketParams(BaseModel):
-    ticket_id: str
-    ticket_action: TicketAction
-    ticket: PostTicket | EditTicket | DeleteTicket
-
-
-class ApproveRejectParams(BaseModel):
-    ticket_id: str
-    user_id: str
 
 
 class TicketInfoParams(BaseModel):
@@ -176,3 +213,8 @@ class TicketInfoParams(BaseModel):
     status: Optional[TicketStatus] = None
     action: Optional[TicketAction] = None
     num: Optional[int] = None
+
+
+class ApproveRejectTicketParams(BaseModel):
+    ticket_id: str
+    user_id: str

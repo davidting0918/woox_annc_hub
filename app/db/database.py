@@ -17,7 +17,8 @@ class MongoClient:
     async def insert_one(self, name: str, document: dict) -> str:
         collection = self.get_collection(name)
         result = await collection.insert_one(document)
-        return str(result.inserted_id)
+        if str(result.inserted_id):
+            return await self.find_one(name, {"_id": result.inserted_id})
 
     async def find_one(self, name: str, query: Dict[str, Any]) -> Dict[str, Any]:
         collection: Collection = self.get_collection(name)
@@ -53,6 +54,11 @@ class MongoClient:
     async def delete_one(self, name: str, query: Dict[str, Any]) -> bool:
         collection: Collection = self.get_collection(name)
         result = await collection.delete_one(query)
+        return result.deleted_count > 0
+
+    async def delete_many(self, name: str, query: Dict[str, Any]) -> bool:
+        collection: Collection = self.get_collection(name)
+        result = await collection.delete_many(query)
         return result.deleted_count > 0
 
     async def close(self):

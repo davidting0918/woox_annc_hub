@@ -1,21 +1,23 @@
+# app/tickets/routes.py
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.auth.services import verify_api_key
 from app.tickets.models import (
-    ApproveRejectParams,
+    ApproveRejectTicketParams,
     CreateTicketParams,
     DeleteTicketParams,
     TicketInfoParams,
     TicketStatus,
 )
-from app.tickets.services import (
+from app.tickets.services import (  # delete_ticket,
     approve_ticket,
     create_ticket,
     delete_ticket,
     get_ticket_info,
     reject_ticket,
+    update_ticket_dashboard,
 )
 
 router = APIRouter(dependencies=[Depends(verify_api_key)])
@@ -56,6 +58,15 @@ async def get_ticket_info_route(
         raise HTTPException(status_code=500, detail=f"Error getting ticket info: {e}")
 
 
+@router.get("/update_dashboard")
+async def update_dashboard_route(direction: str):
+    try:
+        res = await update_ticket_dashboard(direction)
+        return {"status": 1, "data": res}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating ticket dashboard: {e}")
+
+
 # below is `post` endpoints
 @router.post("/create")
 async def create_ticket_route(params: CreateTicketParams):
@@ -70,7 +81,7 @@ async def create_ticket_route(params: CreateTicketParams):
 
 
 @router.post("/approve")
-async def approve_ticket_route(params: ApproveRejectParams):
+async def approve_ticket_route(params: ApproveRejectTicketParams):
     try:
         res = await approve_ticket(params.ticket_id, params.user_id)
         return {
@@ -82,7 +93,7 @@ async def approve_ticket_route(params: ApproveRejectParams):
 
 
 @router.post("/reject")
-async def reject_ticket_route(params: ApproveRejectParams):
+async def reject_ticket_route(params: ApproveRejectTicketParams):
     try:
         res = await reject_ticket(params.ticket_id, params.user_id)
         return {

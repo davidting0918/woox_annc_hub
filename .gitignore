@@ -4,3 +4,4 @@ __pycache__
 app/.env
 app/.env.development
 .idea
+gc_config.json

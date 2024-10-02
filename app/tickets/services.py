@@ -1,6 +1,7 @@
+# app/tickets/services.py
 from fastapi import HTTPException
 
-from app.config.setting import settings
+from app.config.setting import settings as s
 from app.db.database import MongoClient
 from app.tickets.models import (
     CreateTicketParams,
@@ -8,12 +9,13 @@ from app.tickets.models import (
     DeleteTicketParams,
     EditTicket,
     PostTicket,
+    TicketAction,
     TicketInfoParams,
 )
 from app.users.models import User
 from app.users.services import collection as user_collection
 
-client = MongoClient(settings.db_name)
+client = MongoClient(s.dev_db if s.is_test else s.prod_db)
 collection = "ticket_records"
 
 
@@ -26,6 +28,7 @@ async def get_ticket_info(params: TicketInfoParams):
     """
     if params.ticket_id:
         res = await client.find_one(collection, {"ticket_id": params.ticket_id})
+        return [res] if res else []
 
     query = {}
     if params.creator_id:
@@ -61,22 +64,20 @@ async def get_ticket_info(params: TicketInfoParams):
 
 # Below is post endpoints related functions
 async def create_ticket(params: CreateTicketParams):
-    ticket = params.ticket
+
+    ticket_type = {
+        TicketAction.post_annc: PostTicket,
+        TicketAction.edit_annc: EditTicket,
+        TicketAction.delete_annc: DeleteTicket,
+    }
+    ticket = ticket_type[params.action](**params.ticket)
 
     # first check if the ticket is already created
     res = await client.find_one(collection, {"ticket_id": ticket.ticket_id})
     if res:
         raise HTTPException(status_code=400, detail=f"Ticket already created with id: `{ticket.ticket_id}`")
 
-    # post ticket
-    if isinstance(ticket, PostTicket):
-        res = await client.insert_one(collection, ticket.model_dump())
-    elif isinstance(ticket, EditTicket):
-        res = await client.insert_one(collection, ticket.model_dump())
-    elif isinstance(ticket, DeleteTicket):
-        res = await client.insert_one(collection, ticket.model_dump())
-
-    return {"inserted_id": res}
+    return await client.insert_one(collection, ticket.model_dump())
 
 
 async def delete_ticket(params: DeleteTicketParams):
@@ -107,7 +108,12 @@ async def approve_ticket(ticket_id: str, user_id: str):
     }
     ticket = ticket_type[ticket_data["action"]](**ticket_data)
     user_data = await client.find_one(user_collection, {"user_id": user_id})
-    ticket.approve(user=User(**user_data))
+    if not user_data["admin"]:
+        raise HTTPException(status_code=400, detail=f"User with id `{user_id}` is not admin")
+    try:
+        await ticket.approve(user=User(**user_data))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error approving ticket: {str(e)}")
 
     res = await client.update_one(
         collection,
@@ -140,6 +146,8 @@ async def reject_ticket(ticket_id: str, user_id: str):
     }
     ticket = ticket_type[ticket_data["action"]](**ticket_data)
     user_data = await client.find_one(user_collection, {"user_id": user_id})
+    if not user_data["admin"]:
+        raise HTTPException(status_code=400, detail=f"User with id `{user_id}` is not admin")
     ticket.reject(user=User(**user_data))
 
     res = await client.update_one(
@@ -148,3 +156,7 @@ async def reject_ticket(ticket_id: str, user_id: str):
         update=ticket.model_dump(),
     )
     return res
+
+
+async def update_ticket_dashboard():
+    return
