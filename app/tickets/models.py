@@ -129,14 +129,24 @@ class PostTicket(Ticket):
     async def execute(self):
         async def send_message(chat):
             try:
-                send_function = function_map[self.annc_type]
-                if self.annc_type == "text":
-                    message = await send_function(
+                if self.annc_type == AnncType.text:
+                    message = await bot.send_message(
                         chat_id=chat["chat_id"], text=self.content_md, parse_mode="MarkdownV2"
                     )
+                elif self.annc_type == AnncType.image:
+                    message = await bot.send_photo(
+                        chat_id=chat["chat_id"], photo=self.file_path, caption=self.content_md, parse_mode="MarkdownV2"
+                    )
+                elif self.annc_type == AnncType.video:
+                    message = await bot.send_video(
+                        chat_id=chat["chat_id"], video=self.file_path, caption=self.content_md, parse_mode="MarkdownV2"
+                    )
                 else:
-                    message = await send_function(
-                        chat_id=chat["chat_id"], file=self.file_path, caption=self.content_md, parse_mode="MarkdownV2"
+                    message = await bot.send_document(
+                        chat_id=chat["chat_id"],
+                        document=self.file_path,
+                        caption=self.content_md,
+                        parse_mode="MarkdownV2",
                     )
                 return {
                     "chat_id": str(message.chat.id),
@@ -148,12 +158,6 @@ class PostTicket(Ticket):
                 return {"chat_id": chat["chat_id"], "chat_name": chat["chat_name"], "status": False, "error": str(e)}
 
         bot = EventBot(token=s.event_bot_token)
-        function_map = {
-            AnncType.text: bot.send_message,
-            AnncType.image: bot.send_photo,
-            AnncType.video: bot.send_video,
-            AnncType.file: bot.send_document,
-        }
 
         batch_size = 50
         results = []

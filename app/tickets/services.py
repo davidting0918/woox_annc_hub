@@ -1,7 +1,9 @@
 # app/tickets/services.py
+import pandas as pd
 from fastapi import HTTPException
 
 from app.config.setting import settings as s
+from app.db.dashboard import GCClient
 from app.db.database import MongoClient
 from app.tickets.models import (
     CreateTicketParams,
@@ -17,6 +19,7 @@ from app.users.services import collection as user_collection
 
 client = MongoClient(s.dev_db if s.is_test else s.prod_db)
 collection = "ticket_records"
+gc_client = GCClient()
 
 
 # Below is get endpoints related functions
@@ -159,4 +162,53 @@ async def reject_ticket(ticket_id: str, user_id: str):
 
 
 async def update_ticket_dashboard():
-    return
+    """
+    This function will push the ticket info to the google sheet in the separated 3 sheets.
+    and ticket should order by created timestamp in descending order
+    """
+    outputs = {
+        "post_tickets": None,
+        "edit_tickets": None,
+        "delete_tickets": None,
+    }
+
+    # update post ticket
+    columns_map = {
+        "ticket_id": "ID",
+        "annc_type": "Announcement Type",
+        "content_text": "Content",
+        "category": "Category",
+        "language": "Language",
+        "label": "Label",
+        "creator_name": "Creator Name",
+        "created_timestamp": "Created Time",
+        "approver_name": "Approver Name",
+        "status_changed_timestamp": "Operation Time",
+        "chats": "Available Chats",
+        "success_chats": "Success Chats",
+        "failed_chats": "Failed Chats",
+    }
+    post_tickets = pd.DataFrame(
+        await client.find_many(collection, query={"action": TicketAction.post_annc}, sort=[("created_timestamp", -1)])
+    )
+    post_tickets["created_timestamp"] = pd.to_datetime(post_tickets["created_timestamp"], unit="ms")
+    post_tickets["status_changed_timestamp"] = pd.to_datetime(post_tickets["status_changed_timestamp"], unit="ms")
+    post_tickets["chats"] = post_tickets["chats"].apply(lambda x: ", ".join([c["chat_name"] for c in x]))
+    post_tickets["success_chats"] = post_tickets["success_chats"].apply(
+        lambda x: ", ".join([c["chat_name"] for c in x])
+    )
+    post_tickets["failed_chats"] = post_tickets["failed_chats"].apply(lambda x: ", ".join([c["chat_name"] for c in x]))
+    post_tickets = post_tickets.rename(columns=columns_map).fillna("")
+    post_ws = gc_client.get_ws(name="Announcement History", to_type="ws")
+    post_ws.clear()
+    post_ws.set_dataframe(
+        post_tickets[columns_map.values()],
+        start="A1",
+        copy_index=False,
+        copy_head=True,
+    )
+    outputs["post_tickets"] = post_tickets.to_dict(orient="records")
+
+    # update edit ticket
+    # update delete ticket
+    return outputs

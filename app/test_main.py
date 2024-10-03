@@ -640,5 +640,65 @@ async def test_pull_chat_info_dashboard(test_client, auth_headers, clean_db):
     assert "data" in data
     assert len(data["data"]) == chat_num
     assert "new_pull_category" in data["data"][0]["category"]
-    assert "new_pull_label_1" in data["data"][0]["label"]
+    assert "New Pull Label 1" in data["data"][0]["label"]
+    return
+
+
+async def test_update_ticket_info(test_client, auth_headers, clean_db):
+    """
+    This test will try to create and execute a post ticket and update the ticket info the online dashboard
+    1. create a post ticket (use test_image.jpg)
+    2. approve the ticket
+    3. update the ticket info
+    """
+
+    chats_data = [
+        {"chat_id": "-881926759", "chat_name": "v2test10"},
+        {"chat_id": "-690886544", "chat_name": "v2test7"},
+        {"chat_id": "-944613232", "chat_name": "v2test8"},
+    ]
+    error_chats_data = [
+        {"chat_id": "-------", "chat_name": "error_chat"},
+        {"chat_id": "--------", "chat_name": "asdfasdfasd"},
+    ]
+    ticket_data = {
+        "action": "post_annc",
+        "ticket": {
+            "creator_id": "test_user_id",
+            "creator_name": "Test User",
+            "annc_type": "image",
+            "content_text": "test content",
+            "content_html": "<b>test content</b>",
+            "content_md": "**test content**",
+            "file_path": "test_image.jpg",
+            "chats": chats_data + error_chats_data,
+        },
+    }
+    res = await test_client.post("/tickets/create", json=ticket_data, headers=auth_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == 1
+    assert "data" in data
+    assert data["data"]["ticket_id"]
+    assert data["data"]["status"] == "pending"
+    assert data["data"]["action"] == "post_annc"
+    ticket_id = data["data"]["ticket_id"]
+
+    approve_user_data = {"user_id": "approve_user_id", "name": "Approve User", "admin": True, "whitelist": True}
+    res = await test_client.post("/users/create", json=approve_user_data, headers=auth_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == 1
+    assert "data" in data
+
+    approve_data = {
+        "ticket_id": ticket_id,
+        "user_id": "approve_user_id",
+    }
+    res = await test_client.post("/tickets/approve", json=approve_data, headers=auth_headers)
+    assert res.status_code == 200
+
+    # update ticket info to the dashboard
+    res = await test_client.get("/tickets/update_dashboard", headers=auth_headers)
+    assert res.status_code == 200
     return
