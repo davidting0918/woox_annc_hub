@@ -59,9 +59,9 @@ async def get_ticket_info_route(
 
 
 @router.get("/update_dashboard")
-async def update_dashboard_route(direction: str):
+async def update_dashboard_route():
     try:
-        res = await update_ticket_dashboard(direction)
+        res = await update_ticket_dashboard()
         return {"status": 1, "data": res}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error updating ticket dashboard: {e}")

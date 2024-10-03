@@ -5,3 +5,4 @@ app/.env
 app/.env.development
 .idea
 gc_config.json
+.DS_Store
