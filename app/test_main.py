@@ -702,3 +702,95 @@ async def test_update_ticket_info(test_client, auth_headers, clean_db):
     res = await test_client.get("/tickets/update_dashboard", headers=auth_headers)
     assert res.status_code == 200
     return
+
+
+async def test_execute_edit_ticket(test_client, auth_headers, clean_db):
+    """
+    This test will cover the following steps:
+    1. create a post ticket
+    2. approve the ticket
+    3. create an edit ticket
+    4. approve the edit ticket
+    """
+    chats_data = [
+        {"chat_id": "-881926759", "chat_name": "v2test10"},
+        {"chat_id": "-690886544", "chat_name": "v2test7"},
+        {"chat_id": "-944613232", "chat_name": "v2test8"},
+    ]
+    error_chats_data = [
+        {"chat_id": "-------", "chat_name": "error_chat"},
+        {"chat_id": "--------", "chat_name": "asdfasdfasd"},
+    ]
+    ticket_data = {
+        "action": "post_annc",
+        "ticket": {
+            "creator_id": "test_user_id",
+            "creator_name": "Test User",
+            "annc_type": "image",
+            "content_text": "test content",
+            "content_html": "<b>test content</b>",
+            "content_md": "**test content**",
+            "file_path": "test_image.jpg",
+            "chats": chats_data + error_chats_data,
+        },
+    }
+    res = await test_client.post("/tickets/create", json=ticket_data, headers=auth_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == 1
+    assert "data" in data
+    assert data["data"]["ticket_id"]
+    assert data["data"]["status"] == "pending"
+    assert data["data"]["action"] == "post_annc"
+    ticket_id = data["data"]["ticket_id"]
+
+    approve_user_data = {"user_id": "approve_user_id", "name": "Approve User", "admin": True, "whitelist": True}
+    res = await test_client.post("/users/create", json=approve_user_data, headers=auth_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == 1
+    assert "data" in data
+
+    approve_data = {
+        "ticket_id": ticket_id,
+        "user_id": "approve_user_id",
+    }
+    res = await test_client.post("/tickets/approve", json=approve_data, headers=auth_headers)
+    assert res.status_code == 200
+
+    edit_ticket_data = {
+        "action": "edit_annc",
+        "ticket": {
+            "creator_id": "test_user_id",
+            "creator_name": "Test User",
+            "old_ticket_id": ticket_id,
+            "new_content_text": "new test content",
+            "new_content_html": "<b>new test content</b>",
+            "new_content_md": "**new test content**",
+        },
+    }
+    res = await test_client.post("/tickets/create", json=edit_ticket_data, headers=auth_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == 1
+    assert "data" in data
+    assert data["data"]["ticket_id"]
+    assert data["data"]["status"] == "pending"
+    assert data["data"]["action"] == "edit_annc"
+    edit_ticket_id = data["data"]["ticket_id"]
+
+    approve_data = {
+        "ticket_id": edit_ticket_id,
+        "user_id": "approve_user_id",
+    }
+    res = await test_client.post("/tickets/approve", json=approve_data, headers=auth_headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == 1
+    assert "data" in data
+    assert data["data"]["ticket_id"] == edit_ticket_id
+    assert data["data"]["status"] == "approved"
+    assert data["data"]["approver_id"] == "approve_user_id"
+    assert data["data"]["approver_name"] == "Approve User"
+    assert len(data["data"]["success_chats"]) == len(chats_data)
+    return

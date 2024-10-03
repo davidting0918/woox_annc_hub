@@ -176,13 +176,71 @@ class EditTicket(Ticket):
     # set inherited fields
     action: TicketAction = TicketAction.edit_annc
 
+    # announcement info related
+    old_ticket_id: Optional[str] = None
+    old_annc_type: Optional[AnncType] = None
+    old_content_text: Optional[str] = None
+    old_content_html: Optional[str] = None
+    old_content_md: Optional[str] = None
+
+    new_content_text: Optional[str] = None
+    new_content_html: Optional[str] = None
+    new_content_md: Optional[str] = None
+
+    # chats related
+    chats: List[Dict] = Field(default_factory=list)
+    success_chats: List[Dict] = Field(default_factory=list)
+    failed_chats: List[Dict] = Field(default_factory=list)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         if not self.ticket_id:
             self.ticket_id = f"EDIT-{self._id}"
 
     async def execute(self):
-        return
+        async def update_message(chat: Dict):
+            try:
+                if self.old_annc_type == AnncType.text:
+                    message = await bot.edit_message_text(
+                        chat_id=chat["chat_id"],
+                        message_id=chat["message_id"],
+                        text=self.new_content_md,
+                        parse_mode="MarkdownV2",
+                    )
+                else:
+                    message = await bot.edit_message_caption(
+                        chat_id=chat["chat_id"],
+                        message_id=chat["message_id"],
+                        caption=self.new_content_md,
+                        parse_mode="MarkdownV2",
+                    )
+                return {
+                    "chat_id": str(message.chat.id),
+                    "chat_name": str(message.chat.title),
+                    "message_id": str(message.message_id),
+                    "status": True,
+                }
+            except TelegramError as e:
+                return {
+                    "chat_id": chat["chat_id"],
+                    "chat_name": chat["chat_name"],
+                    "message_id": chat["message_id"],
+                    "status": False,
+                    "error": str(e),
+                }
+
+        bot = EventBot(token=s.event_bot_token)
+        batch_size = 50
+        results = []
+        for i in range(0, len(self.chats), batch_size):
+            batch = self.chats[i : i + batch_size]
+            batch_results = await asyncio.gather(*[update_message(chat) for chat in batch])
+            results.extend(batch_results)
+            time.sleep(1)
+
+        success_chats = [result for result in results if result["status"]]
+        failed_chats = [result for result in results if not result["status"]]
+        return {"success_chats": success_chats, "failed_chats": failed_chats}
 
 
 class DeleteTicket(Ticket):

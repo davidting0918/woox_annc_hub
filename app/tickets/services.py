@@ -73,6 +73,15 @@ async def create_ticket(params: CreateTicketParams):
         TicketAction.edit_annc: EditTicket,
         TicketAction.delete_annc: DeleteTicket,
     }
+    if params.action == TicketAction.edit_annc:
+        old_ticket = await client.find_one(collection, {"ticket_id": params.ticket["old_ticket_id"]})
+        if not old_ticket:
+            raise HTTPException(status_code=400, detail=f"No ticket found with id: `{params.ticket['old_ticket_id']}`")
+        params.ticket["old_content_text"] = old_ticket["content_text"]
+        params.ticket["old_content_html"] = old_ticket["content_html"]
+        params.ticket["old_content_md"] = old_ticket["content_md"]
+        params.ticket["old_annc_type"] = old_ticket["annc_type"]
+        params.ticket["chats"] = old_ticket["success_chats"]
     ticket = ticket_type[params.action](**params.ticket)
 
     # first check if the ticket is already created
