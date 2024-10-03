@@ -793,4 +793,8 @@ async def test_execute_edit_ticket(test_client, auth_headers, clean_db):
     assert data["data"]["approver_id"] == "approve_user_id"
     assert data["data"]["approver_name"] == "Approve User"
     assert len(data["data"]["success_chats"]) == len(chats_data)
+
+    # update ticket info to the dashboard
+    res = await test_client.get("/tickets/update_dashboard", headers=auth_headers)
+    assert res.status_code == 200
     return

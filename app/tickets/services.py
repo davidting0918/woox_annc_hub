@@ -219,5 +219,39 @@ async def update_ticket_dashboard():
     outputs["post_tickets"] = post_tickets.to_dict(orient="records")
 
     # update edit ticket
+    columns_map = {
+        "ticket_id": "ID",
+        "old_ticket_id": "Old Ticket ID",
+        "old_annc_type": "Old Announcement Type",
+        "old_content_text": "Old Content",
+        "new_content_text": "New Content",
+        "creator_name": "Creator Name",
+        "created_timestamp": "Created Time",
+        "approver_name": "Approver Name",
+        "status_changed_timestamp": "Operation Time",
+        "chats": "Available Chats",
+        "success_chats": "Success Chats",
+        "failed_chats": "Failed Chats",
+    }
+    edit_tickets = pd.DataFrame(
+        await client.find_many(collection, query={"action": TicketAction.edit_annc}, sort=[("created_timestamp", -1)])
+    )
+    edit_tickets["created_timestamp"] = pd.to_datetime(edit_tickets["created_timestamp"], unit="ms")
+    edit_tickets["status_changed_timestamp"] = pd.to_datetime(edit_tickets["status_changed_timestamp"], unit="ms")
+    edit_tickets["chats"] = edit_tickets["chats"].apply(lambda x: ", ".join([c["chat_name"] for c in x]))
+    edit_tickets["success_chats"] = edit_tickets["success_chats"].apply(
+        lambda x: ", ".join([c["chat_name"] for c in x])
+    )
+    edit_tickets["failed_chats"] = edit_tickets["failed_chats"].apply(lambda x: ", ".join([c["chat_name"] for c in x]))
+    edit_tickets = edit_tickets.rename(columns=columns_map).fillna("")
+    edit_ws = gc_client.get_ws(name="Edit History", to_type="ws")
+    edit_ws.clear()
+    edit_ws.set_dataframe(
+        edit_tickets[columns_map.values()],
+        start="A1",
+        copy_index=False,
+        copy_head=True,
+    )
+    outputs["edit_tickets"] = edit_tickets.to_dict(orient="records")
     # update delete ticket
     return outputs
