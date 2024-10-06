@@ -45,6 +45,7 @@ class Chat(BaseModel):
     active: bool = True  # default is true
     created_timestamp: int = Field(default_factory=lambda: int(dt.now().timestamp() * 1000))
     updated_timestamp: int = Field(default_factory=lambda: int(dt.now().timestamp() * 1000))
+    description: Optional[str] = None
 
     def update(self, params: UpdateChatInfo):
         if params.name:

@@ -20,6 +20,11 @@ class MongoClient:
         if str(result.inserted_id):
             return await self.find_one(name, {"_id": result.inserted_id})
 
+    async def insert_many(self, name: str, documents: List[dict]) -> List[str]:
+        collection = self.get_collection(name)
+        result = await collection.insert_many(documents)
+        return await self.find_many(name, {"_id": {"$in": result.inserted_ids}})
+
     async def find_one(self, name: str, query: Dict[str, Any]) -> Dict[str, Any]:
         collection: Collection = self.get_collection(name)
         result = await collection.find_one(query)
