@@ -6,7 +6,7 @@ import pandas as pd
 from app.config.setting import settings
 from app.db.database import MongoClient
 
-new_db_client = MongoClient(settings.prod_db_name)
+new_db_client = MongoClient(settings.prod_db)
 old_db_client = MongoClient("AnnouncementDB")
 
 
@@ -33,15 +33,17 @@ async def migrate_users():
     df["created_timestamp"] = df["updated_timestamp"]
 
     datas = df.to_dict(orient="records")
-    for data in datas:
-        await new_db_client.insert_one(new_table, data)
 
-    return
+    # first clear the new table
+    await new_db_client.delete_many(new_table, query={})
+    res = await new_db_client.insert_many(new_table, datas)
+
+    return res
 
 
 async def migrate_chats():
     old_table = "ChatInfo"
-    # new_table = "chat_info"
+    new_table = "chat_info"
     chat_info = await old_db_client.find_many(old_table, query={})
 
     # key is the old key and value is the new key
@@ -85,15 +87,58 @@ async def migrate_chats():
         data["label"] = label
 
         data["active"] = True
+
+        # convert timestamp
+        data["created_timestamp"] = (
+            int(
+                dt.strptime(
+                    data["created_timestamp"],
+                    "%Y-%m-%d" if len(data["created_timestamp"]) == 10 else "%Y-%m-%d %H:%M:%S",
+                ).timestamp()
+            )
+            * 1000
+        )
+        data["updated_timestamp"] = (
+            int(
+                dt.strptime(
+                    data["updated_timestamp"],
+                    "%Y-%m-%d" if len(data["updated_timestamp"]) == 10 else "%Y-%m-%d %H:%M:%S",
+                ).timestamp()
+            )
+            * 1000
+            if data["updated_timestamp"]
+            else data["created_timestamp"]
+        )
         continue
 
     df = pd.DataFrame(datas)
 
-    return df
+    to_columns = [
+        "chat_id",
+        "name",
+        "chat_type",
+        "language",
+        "category",
+        "label",
+        "active",
+        "created_timestamp",
+        "updated_timestamp",
+        "description",
+    ]
+    chats_df = df[to_columns].to_dict(orient="records")
+
+    # first clear the new table
+    await new_db_client.delete_many(new_table, query={})
+    res = await new_db_client.insert_many(new_table, chats_df)
+
+    return res
+
+
+async def main():
+    output = await asyncio.gather(migrate_users(), migrate_chats())
+    return output
 
 
 if __name__ == "__main__":
     print("Migrating data from old database to new database")
-
-    asyncio.run(migrate_users())
-    asyncio.run(migrate_chats())
+    asyncio.run(main())
