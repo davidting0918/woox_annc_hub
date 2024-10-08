@@ -75,6 +75,7 @@ async def migrate_chats():
                 "dmm_program",
                 "vip_program",
                 "new_trading_competition",
+                "test_channel",
             ]
             if data[i]
         ]

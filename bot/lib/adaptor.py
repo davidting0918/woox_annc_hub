@@ -2,7 +2,7 @@ import requests as req
 
 
 class AnnouncementClient:
-    BASE_URL = "https://localhost:8000"
+    BASE_URL = "http://localhost:8000"
     chats_prefix = "/chats"
 
     def __init__(self, api_key: str, api_secret: str):
@@ -50,6 +50,10 @@ class AnnouncementClient:
         url = f"{self.base_url}{self.chats_prefix}/info"
         return self._get(url, params=kwargs)
 
+    def update_chats_dashboard(self, **kwargs):
+        url = f"{self.base_url}{self.chats_prefix}/update_dashboard"
+        return self._get(url, params=kwargs)
+
     # user related
     def create_user(self, **kwargs):
         url = f"{self.base_url}/users/create"
@@ -65,6 +69,14 @@ class AnnouncementClient:
 
     def get_user_info(self, **kwargs):
         url = f"{self.base_url}/users/info"
+        return self._get(url, params=kwargs)
+
+    def in_whitelist(self, **kwargs):
+        url = f"{self.base_url}/users/in_whitelist"
+        return self._get(url, params=kwargs)
+
+    def is_admin(self, **kwargs):
+        url = f"{self.base_url}/users/is_admin"
         return self._get(url, params=kwargs)
 
     # ticket related

@@ -74,6 +74,7 @@ async def update_chat_dashboard(direction: str = "pull", **kwargs):
         "label": "Label",
         "language": "Language",
         "category": "Category",
+        "description": "Description",
     }
     if direction == "push":
         ws = gc_client.get_ws(name="TG Chat Info", to_type="ws")
@@ -93,6 +94,7 @@ async def update_chat_dashboard(direction: str = "pull", **kwargs):
         chat_info["Added Time"] = pd.to_datetime(chat_info["Added Time"], unit="ms")
 
         # start writing to the google sheet
+        # TODO: need to keep the original order of the chat info on the google sheet, new chat will be added to the end
         ws.clear()
         ws.set_dataframe(chat_info, start="A1", copy_index=False, copy_head=True)
 
@@ -103,6 +105,9 @@ async def update_chat_dashboard(direction: str = "pull", **kwargs):
         Category is the column between Description and Label
         """
         chat_info = gc_client.get_ws(name="TG Chat Info", to_type="df")  # .drop(columns=[""])
+        if "Description" not in chat_info.columns:
+            chat_info["Description"] = ""
+
         category = list(chat_info.columns)[
             chat_info.columns.get_loc("Label") + 1 : chat_info.columns.get_loc("Description")
         ]
@@ -129,6 +134,7 @@ async def update_chat_dashboard(direction: str = "pull", **kwargs):
                     language=new_data["language"],
                     category=new_data["category"],
                     label=new_data["label"],
+                    description=new_data["description"],
                 )
             )
 

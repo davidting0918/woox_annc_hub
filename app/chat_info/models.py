@@ -29,6 +29,7 @@ class UpdateChatInfo(BaseModel):
     category: Optional[list[str]] = None
     label: Optional[list[str]] = None
     active: Optional[bool] = None
+    description: Optional[str] = None
 
 
 class DeleteChatInfo(BaseModel):
@@ -52,13 +53,15 @@ class Chat(BaseModel):
             self.name = params.name
         if params.chat_type:
             self.chat_type = params.chat_type
-        if params.language:
+        if params.language is not None:
             self.language = params.language
-        if params.category:
+        if params.category is not None:
             self.category = params.category
-        if params.label:
+        if params.label is not None:
             self.label = params.label
         if params.active is not None:
             self.active = params.active
+        if params.description is not None:
+            self.description = params.description
 
         self.updated_timestamp = int(dt.now().timestamp() * 1000)
