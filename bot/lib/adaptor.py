@@ -84,10 +84,6 @@ class AnnouncementClient:
         url = f"{self.base_url}/tickets/create"
         return self._post(url, params=kwargs)
 
-    def update_ticket(self, **kwargs):
-        url = f"{self.base_url}/tickets/update"
-        return self._post(url, params=kwargs)
-
     def approve_ticket(self, **kwargs):
         url = f"{self.base_url}/tickets/approve"
         return self._post(url, params=kwargs)
@@ -99,3 +95,11 @@ class AnnouncementClient:
     def delete_ticket(self, **kwargs):
         url = f"{self.base_url}/tickets/delete"
         return self._post(url, params=kwargs)
+
+    def get_ticket_info(self, **kwargs):
+        url = f"{self.base_url}/tickets/info"
+        return self._get(url, params=kwargs)
+
+    def update_ticket_dashboard(self, **kwargs):
+        url = f"{self.base_url}/tickets/update_dashboard"
+        return self._get(url, params=kwargs)

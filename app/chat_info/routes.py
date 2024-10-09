@@ -25,10 +25,18 @@ async def get_chat_info_route(
     language: Optional[List[str]] = Query(None),
     category: Optional[List[str]] = Query(None),
     label: Optional[List[str]] = Query(None),
+    active: Optional[bool] = True,
     num: Optional[int] = Query(100),
 ):
     params = ChatInfoParams(
-        chat_id=chat_id, name=name, chat_type=chat_type, language=language, category=category, label=label, num=num
+        chat_id=chat_id,
+        name=name,
+        chat_type=chat_type,
+        language=language,
+        category=category,
+        label=label,
+        num=num,
+        active=active,
     )
     try:
         res = await get_chat_info(params)

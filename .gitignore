@@ -8,4 +8,5 @@ bot/.env
 gc_config.json
 .DS_Store
 bot/log
+bot/db/files
 misc.py

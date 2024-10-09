@@ -26,13 +26,19 @@ async def get_chat_info(params: ChatInfoParams):
     2. `chat_type`, `language`, `category`, `label` can combine with `num`
         and logic will be `OR` between params and `AND` within each param
     """
-    if params.chat_id:
-        return [await client.find_one(collection, query={"chat_id": params.chat_id})]
-
-    if params.name:
-        return [await client.find_one(collection, query={"name": params.name})]
-
     query = {}
+    if params.chat_id is not None:
+        if type(params.chat_id) == list:
+            query["chat_id"] = {"$in": params.chat_id}
+        else:
+            query["chat_id"] = params.chat_id
+
+    if params.name is not None:
+        if type(params.name) == list:
+            query["name"] = {"$in": params.name}
+        else:
+            query["name"] = params.name
+
     if params.chat_type:
         query["chat_type"] = params.chat_type
     if params.language:
@@ -41,6 +47,8 @@ async def get_chat_info(params: ChatInfoParams):
         query["category"] = {"$in": params.category}
     if params.label:
         query["label"] = {"$in": params.label}
+    if params.active is not None:
+        query["active"] = params.active
 
     return await client.find_many(collection, query=query, limit=params.num)
 
