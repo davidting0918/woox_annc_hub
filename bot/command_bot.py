@@ -56,6 +56,37 @@ class CommandBot:
 
         return message
 
+    def get_report_message(self, ticket_id: str) -> str:
+        data = self.client.get_ticket_info(ticket_id=ticket_id)["data"][0]
+        if data["action"] == "post_annc":
+            if data["category"] == "others":
+                message = (
+                    f"<b>[{'Approved' if data['status'] == 'approved' else 'Rejected'} Message]</b>\n\n"
+                    f"<b>Operation:</b> <code>{data['action']}</code>\n"
+                    f"<b>ID:</b> {data['ticket_id']}\n"
+                    f"<b>Creator:</b> {data['creator_name']}\n"
+                    f"<b>Operator:</b> {data['approver_name']}\n"
+                    f"<b>Labels:</b> <code>{', '.join(data['label']) if data['label'] else ''}</code>\n"
+                    f"<b>Chats:</b> <code>{', '.join([i['chat_name'] for i in data['chats']]) if data['chats'] else ''}</code>\n"
+                    f"<b>Expected Chat numbers:</b> {len(data['chats']) if data['status'] == 'approved' else 0}\n"
+                    f"<b>Succeed Chat numbers:</b> {len(data['success_chats'])}\n"
+                    f"<b>Failed Chat numbers:</b> {len(data['failed_chats'])}\n"
+                )
+            else:
+                message = (
+                    f"<b>[{'Approved' if data['status'] == 'approved' else 'Rejected'} Message]</b>\n\n"
+                    f"<b>Operation:</b> <code>{data['action']}</code>\n"
+                    f"<b>ID:</b> <code>{data['ticket_id']}</code>\n"
+                    f"<b>Creator:</b> {data['creator_name']}\n"
+                    f"<b>Operator:</b> {data['approver_name']}\n"
+                    f"<b>Category:</b> <code>{data['category'].replace('_', ' ').title()}</code>\n"
+                    f"<b>Language:</b> <code>{data['language'].title()}</code>\n"
+                    f"<b>Expected Chat numbers:</b> {len(data['chats']) if data['status'] == 'approved' else 0}\n"
+                    f"<b>Succeed Chat numbers:</b> {len(data['success_chats'])}\n"
+                    f"<b>Failed Chat numbers:</b> {len(data['failed_chats'])}\n"
+                )
+        return message
+
     def get_category_pattern(self):
         chats = self.client.get_chat_info(active=True)["data"]
         category = list(set([j for i in chats for j in i["category"]]))
@@ -214,10 +245,14 @@ class CommandBot:
 
         # get all chats, split into 1. using category + language 2. using labels + names
         if context.user_data["category"] == "others":
-            chats = (
-                self.client.get_chat_info(label=context.user_data["labels"])["data"]
-                + self.client.get_chat_info(name=context.user_data["chats"])["data"]
-            )
+            # check whether there is label or name in the input, if exist then do query
+            chats = []
+            if context.user_data["labels"]:
+                chats += self.client.get_chat_info(label=context.user_data["labels"])["data"]
+
+            if context.user_data["chats"]:
+                chats += self.client.get_chat_info(name=context.user_data["chats"])["data"]
+
         else:
             chats = self.client.get_chat_info(
                 category=context.user_data["category"], language=context.user_data["language"]
@@ -313,6 +348,27 @@ class CommandBot:
 
         return ConversationHandler.END
 
+    async def confirm_post(self, update: Update, context: ContextTypes) -> None:
+        operator = update.callback_query.from_user
+
+        query = update.callback_query
+        ticket_id = query.data.split("_")[1]
+        action = query.data.split("_")[0]
+
+        if action == "approve":
+            self.client.approve_ticket(ticket_id=ticket_id, user_id=str(operator.id))
+
+        else:
+            self.client.reject_ticket(ticket_id=ticket_id, user_id=str(operator.id))
+
+        report_message = self.get_report_message(ticket_id)
+
+        await query.message.edit_text(report_message, parse_mode="HTML")
+        self.client.update_ticket_dashboard()
+
+        self.logger.info(f"Announcement `{ticket_id}` ticket {action} by {operator.full_name}({operator.id})")
+        return ConversationHandler.END
+
     async def cancel(self, update: Update, context: ContextTypes) -> int:
         operator = update.message.from_user
 
@@ -343,9 +399,11 @@ class CommandBot:
             fallbacks=[CommandHandler("cancel", self.cancel)],
             per_chat=False,
         )
+        confirm_post_handler = CallbackQueryHandler(self.confirm_post, pattern="^(approve|reject)_.*")
 
         # confirm post announcement pipeline
         app.add_handler(post_handler)
+        app.add_handler(confirm_post_handler)
         app.run_polling()
 
 
