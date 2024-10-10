@@ -16,6 +16,7 @@ from utils import get_logger, init_args, save_file
 from bot.lib.adaptor import AnnouncementClient as ac
 
 CATEGORY, LANGUAGE, LABEL, CONTENT = range(4)
+EDIT_TICKET_ID, EDIT_NEW_CONTENT = range(2)
 
 
 class CommandBot:
@@ -33,25 +34,38 @@ class CommandBot:
         self.logger = get_logger(self.name)
         self.is_test = is_test
 
-    def get_post_confirm_message(self, ticket_id: str) -> str:
+    def get_confirm_message(self, ticket_id: str) -> str:
         data = self.client.get_ticket_info(ticket_id=ticket_id)["data"][0]
-        if data["category"] != "others":
+        if data["action"] == "post_annc":
+            if data["category"] != "others":
+                message = (
+                    f"<b>[Confirm Message]</b>\n\n"
+                    f"<b>ID:</b> <code>{ticket_id}</code>\n"
+                    f"<b>Creator:</b> {data['creator_name']}\n"
+                    f"<b>Category:</b> <code>{data['category'].replace('_', ' ').title()}</code>\n"
+                    f"<b>Language:</b> <code>{data['language'].title()}</code>\n"
+                    f"<b>Chat numbers:</b> {len(data['chats'])}\n"
+                    f"<a> Please check the announcement content in the next message.</a>"
+                )
+            else:
+                message = (
+                    f"<b>[Confirm Message]</b>\n\n"
+                    f"<b>ID:</b> <code>{ticket_id}</code>\n"
+                    f"<b>Creator:</b> {data['creator_name']}\n"
+                    f"<b>Chat numbers:</b> {len(data['chats'])}\n"
+                    f"<a> Please check the announcement content in the next message.</a>"
+                )
+        elif data["action"] == "edit_annc":
             message = (
                 f"<b>[Confirm Message]</b>\n\n"
                 f"<b>ID:</b> <code>{ticket_id}</code>\n"
+                f"<b>Annc ID:</b> <code>{data['old_ticket_id']}</code>\n"
                 f"<b>Creator:</b> {data['creator_name']}\n"
-                f"<b>Category:</b> <code>{data['category'].replace('_', ' ').title()}</code>\n"
-                f"<b>Language:</b> <code>{data['language'].title()}</code>\n"
-                f"<b>Chat numbers:</b> {len(data['chats'])}\n"
-                f"<a> Please check the announcement content in the next message.</a>"
-            )
-        else:
-            message = (
-                f"<b>[Confirm Message]</b>\n\n"
-                f"<b>ID:</b> <code>{ticket_id}</code>\n"
-                f"<b>Creator:</b> {data['creator_name']}\n"
-                f"<b>Chat numbers:</b> {len(data['chats'])}\n"
-                f"<a> Please check the announcement content in the next message.</a>"
+                f"<b>Chat numbers:</b> {len(data['chats'])}\n\n"
+                f"<b>Original Contents:</b>\n\n"
+                f"{data['old_content_html']}\n\n"
+                f"<b>New Contents:</b>\n\n"
+                f"{data['new_content_html']}\n"
             )
 
         return message
@@ -85,6 +99,20 @@ class CommandBot:
                     f"<b>Succeed Chat numbers:</b> {len(data['success_chats'])}\n"
                     f"<b>Failed Chat numbers:</b> {len(data['failed_chats'])}\n"
                 )
+        elif data["action"] == "edit_annc":
+            message = (
+                f"<b>[{'Approved' if data['status'] == 'approved' else 'Rejected'} Message]</b>\n\n"
+                f"<b>Operation:</b> <code>{data['action']}</code>\n"
+                f"<b>ID:</b> <code>{data['ticket_id']}</code>\n"
+                f"<b>Annc ID:</b> <code>{data['old_ticket_id']}</code>\n"
+                f"<b>Creator:</b> {data['creator_name']}\n"
+                f"<b>Operator:</b> {data['approver_name']}\n"
+                f"<b>Chat numbers:</b> {len(data['chats'])}\n"
+                f"<b>Original Contents:</b>\n\n"
+                f"{data['old_content_html']}\n\n"
+                f"<b>New Contents:</b>\n\n"
+                f"{data['new_content_html']}\n"
+            )
         return message
 
     def get_category_pattern(self):
@@ -311,7 +339,7 @@ class CommandBot:
         # send out first part of confirm message, include confirm button
         inputs = {
             "chat_id": chat_id,
-            "text": self.get_post_confirm_message(ticket_id),
+            "text": self.get_confirm_message(ticket_id),
             "parse_mode": "HTML",
             "reply_markup": reply_markup,
         }
@@ -369,6 +397,114 @@ class CommandBot:
         self.logger.info(f"Announcement `{ticket_id}` ticket {action} by {operator.full_name}({operator.id})")
         return ConversationHandler.END
 
+    async def edit(self, update: Update, context: ContextTypes) -> None:
+        operator = update.message.from_user
+
+        if not self.client.in_whitelist(user_id=str(operator.id))["data"]:
+            await update.message.reply_text(f"Hi {operator.full_name}, You are not in the whitelist")
+            return ConversationHandler.END
+
+        self.client.update_ticket_dashboard()
+
+        message = (
+            f"Hello {operator.full_name}\! Please enter the ID of the announcement you want to edit\. \n"
+            f"Can check the ID in [**Announcement History**]"
+            f"(https://docs.google.com/spreadsheets/d/1k2P8Ok0O6d9J3_WWDiEbmKpIkKrWYG96gB52zrEGOf0/edit?gid=0#gid=0)"
+        )
+        await update.message.reply_text(message, parse_mode="MarkdownV2")
+        context.user_data["creator_id"] = str(operator.id)
+        context.user_data["creator_name"] = operator.full_name
+
+        return EDIT_TICKET_ID
+
+    async def choose_edit_ticket_id(self, update: Update, context: ContextTypes) -> int:
+        ticket_id = update.message.text
+
+        res = self.client.get_ticket_info(ticket_id=ticket_id)
+        if "data" not in res:
+            await update.message.reply_text(f"Ticket ID `{ticket_id}` not found, please check again")
+            return EDIT_TICKET_ID
+        data = res["data"][0]
+
+        if data["status"] != "approved":
+            await update.message.reply_text(
+                f"Ticket ID `{ticket_id}` is not approved, currently in `{data['status']}` status"
+            )
+            return EDIT_TICKET_ID
+
+        context.user_data["old_ticket_id"] = ticket_id
+
+        message = f"Ticket `{ticket_id}` found, please enter the new content of the announcement\n"
+        await update.message.reply_text(message, parse_mode="MarkdownV2")
+        return EDIT_NEW_CONTENT
+
+    async def input_edit_new_content(self, update: Update, context: ContextTypes) -> None:
+        new_content_text = update.message.text
+        new_content_html = update.message.text_html if update.message.text_html else ""
+        new_content_md = update.message.text_markdown if update.message.text_markdown else ""
+
+        # create ticket
+        ticket = {
+            "action": "edit_annc",
+            "ticket": {
+                "creator_id": context.user_data["creator_id"],
+                "creator_name": context.user_data["creator_name"],
+                "old_ticket_id": context.user_data["old_ticket_id"],
+                "new_content_text": new_content_text,
+                "new_content_html": new_content_html,
+                "new_content_md": new_content_md,
+            },
+        }
+        res = self.client.create_ticket(**ticket)
+        ticket_id = res["data"]["ticket_id"]
+        message = self.get_confirm_message(ticket_id)
+
+        keyboard = [
+            [InlineKeyboardButton("Approve", callback_data=f"edit_approve_{ticket_id}")],
+            [InlineKeyboardButton("Reject", callback_data=f"edit_reject_{ticket_id}")],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        await context.bot.send_message(
+            chat_id=self.CONFIRM_CHAT_ID if not self.is_test else self.TEST_CONFIRM_CHAT_ID,
+            text=message,
+            parse_mode="HTML",
+            reply_markup=reply_markup,
+        )
+
+        self.logger.info(
+            f"Edit ticket `{ticket_id}` sent by {context.user_data['creator_name']}({context.user_data['creator_id']})"
+        )
+
+        message = (
+            f"Your edit ticket has been sent to the admin group for approval, "
+            f"please wait patiently\.\n"
+            f"ID: `{ticket_id}`"
+        )
+        await update.message.reply_text(message, parse_mode="MarkdownV2")
+        return ConversationHandler.END
+
+    async def confirm_edit(self, update: Update, context: ContextTypes) -> None:
+        operator = update.callback_query.from_user
+
+        query = update.callback_query
+        ticket_id = query.data.split("_")[-1]
+        action = query.data.split("_")[1]
+
+        if action == "approve":
+            self.client.approve_ticket(ticket_id=ticket_id, user_id=str(operator.id))
+
+        else:
+            self.client.reject_ticket(ticket_id=ticket_id, user_id=str(operator.id))
+
+        report_message = self.get_report_message(ticket_id)
+
+        await query.message.edit_text(report_message, parse_mode="HTML")
+        self.client.update_ticket_dashboard()
+
+        self.logger.info(f"Edit ticket `{ticket_id}` ticket {action} by {operator.full_name}({operator.id})")
+        return ConversationHandler.END
+
     async def cancel(self, update: Update, context: ContextTypes) -> int:
         operator = update.message.from_user
 
@@ -401,9 +537,23 @@ class CommandBot:
         )
         confirm_post_handler = CallbackQueryHandler(self.confirm_post, pattern="^(approve|reject)_.*")
 
+        # edit announcement pipeline
+        edit_handler = ConversationHandler(
+            entry_points=[CommandHandler("edit", self.edit)],
+            states={
+                EDIT_TICKET_ID: [MessageHandler(filters.TEXT, self.choose_edit_ticket_id)],
+                EDIT_NEW_CONTENT: [MessageHandler(filters.TEXT, self.input_edit_new_content)],
+            },
+            fallbacks=[CommandHandler("cancel", self.cancel)],
+            per_chat=False,
+        )
+        confirm_edit_handler = CallbackQueryHandler(self.confirm_edit, pattern="^(edit_approve|edit_reject)_.*")
+
         # confirm post announcement pipeline
         app.add_handler(post_handler)
         app.add_handler(confirm_post_handler)
+        app.add_handler(edit_handler)
+        app.add_handler(confirm_edit_handler)
         app.run_polling()
 
 
