@@ -251,6 +251,9 @@ class DeleteTicket(Ticket):
     old_ticket_id: Optional[str] = None  # should be post ticket id
     old_annc_type: Optional[AnncType] = None
     old_content_text: Optional[str] = None
+    old_content_html: Optional[str] = None
+    old_content_md: Optional[str] = None
+    old_file_path: Optional[str] = None
 
     # chats related
     chats: List[Dict] = Field(default_factory=list)

@@ -93,6 +93,9 @@ async def create_ticket(params: CreateTicketParams):
             )
         params.ticket["old_content_text"] = old_ticket["content_text"]
         params.ticket["old_annc_type"] = old_ticket["annc_type"]
+        params.ticket["old_content_html"] = old_ticket["content_html"]
+        params.ticket["old_content_md"] = old_ticket["content_md"]
+        params.ticket["old_file_path"] = old_ticket["file_path"]
         params.ticket["chats"] = old_ticket["success_chats"]
     ticket = ticket_type[params.action](**params.ticket)
 
