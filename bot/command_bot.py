@@ -29,9 +29,9 @@ class CommandBot:
     def name(self):
         return "CommandBot"
 
-    def __init__(self, command_bot_key: str, api_key: str, api_secret: str, is_test: bool = False):
+    def __init__(self, bot_key: str, api_key: str, api_secret: str, is_test: bool = False):
         self.client = ac(api_key=api_key, api_secret=api_secret)
-        self.command_bot_key = command_bot_key
+        self.bot_key = bot_key
         self.logger = get_logger(self.name)
         self.is_test = is_test
 
@@ -288,7 +288,7 @@ class CommandBot:
             file_id = ""
             annc_type = "text"
 
-        file = await save_file(file_id, bot=Bot(self.command_bot_key, request=self.REQUEST))
+        file = await save_file(file_id, bot=Bot(self.bot_key, request=self.REQUEST))
 
         # get all chats, split into 1. using category + language 2. using labels + names
         if context.user_data["category"] == "others":
@@ -647,7 +647,7 @@ class CommandBot:
 
     def run(self) -> None:
         self.logger.info(f"Starting {self.name}...")
-        app = Application.builder().token(self.command_bot_key).build()
+        app = Application.builder().token(self.bot_key).build()
 
         app.add_handler(CommandHandler("start", self.start))
 
@@ -716,7 +716,7 @@ if __name__ == "__main__":
     load_dotenv()
     args = init_args("CommandBot")
     bot = CommandBot(
-        command_bot_key=os.getenv("COMMAND_BOT_TOKEN"),
+        bot_key=os.getenv("COMMAND_BOT_TOKEN"),
         api_key=os.getenv("API_KEY"),
         api_secret=os.getenv("API_SECRET"),
         is_test=args.test,
