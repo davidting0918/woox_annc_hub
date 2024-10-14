@@ -1,6 +1,6 @@
 from datetime import datetime as dt
 from enum import Enum
-from typing import Optional
+from typing import Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -12,13 +12,14 @@ class ChatType(str, Enum):
 
 
 class ChatInfoParams(BaseModel):
-    chat_id: Optional[str] = None
-    name: Optional[str] = None
+    chat_id: Optional[Union[list[str], str]] = None
+    name: Optional[Union[list[str], str]] = None
     chat_type: Optional[ChatType] = None
     language: Optional[list[str]] = None
     category: Optional[list[str]] = None
     label: Optional[list[str]] = None
-    num: Optional[int] = 100
+    active: Optional[bool] = None
+    num: Optional[int] = 1000
 
 
 class UpdateChatInfo(BaseModel):
@@ -29,6 +30,7 @@ class UpdateChatInfo(BaseModel):
     category: Optional[list[str]] = None
     label: Optional[list[str]] = None
     active: Optional[bool] = None
+    description: Optional[str] = None
 
 
 class DeleteChatInfo(BaseModel):
@@ -52,13 +54,15 @@ class Chat(BaseModel):
             self.name = params.name
         if params.chat_type:
             self.chat_type = params.chat_type
-        if params.language:
+        if params.language is not None:
             self.language = params.language
-        if params.category:
+        if params.category is not None:
             self.category = params.category
-        if params.label:
+        if params.label is not None:
             self.label = params.label
         if params.active is not None:
             self.active = params.active
+        if params.description is not None:
+            self.description = params.description
 
         self.updated_timestamp = int(dt.now().timestamp() * 1000)

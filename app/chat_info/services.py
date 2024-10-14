@@ -26,13 +26,19 @@ async def get_chat_info(params: ChatInfoParams):
     2. `chat_type`, `language`, `category`, `label` can combine with `num`
         and logic will be `OR` between params and `AND` within each param
     """
-    if params.chat_id:
-        return [await client.find_one(collection, query={"chat_id": params.chat_id})]
-
-    if params.name:
-        return [await client.find_one(collection, query={"name": params.name})]
-
     query = {}
+    if params.chat_id is not None:
+        if type(params.chat_id) == list:
+            query["chat_id"] = {"$in": params.chat_id}
+        else:
+            query["chat_id"] = params.chat_id
+
+    if params.name is not None:
+        if type(params.name) == list:
+            query["name"] = {"$in": params.name}
+        else:
+            query["name"] = params.name
+
     if params.chat_type:
         query["chat_type"] = params.chat_type
     if params.language:
@@ -41,6 +47,8 @@ async def get_chat_info(params: ChatInfoParams):
         query["category"] = {"$in": params.category}
     if params.label:
         query["label"] = {"$in": params.label}
+    if params.active is not None:
+        query["active"] = params.active
 
     return await client.find_many(collection, query=query, limit=params.num)
 
@@ -74,6 +82,7 @@ async def update_chat_dashboard(direction: str = "pull", **kwargs):
         "label": "Label",
         "language": "Language",
         "category": "Category",
+        "description": "Description",
     }
     if direction == "push":
         ws = gc_client.get_ws(name="TG Chat Info", to_type="ws")
@@ -91,8 +100,17 @@ async def update_chat_dashboard(direction: str = "pull", **kwargs):
             chat_info[cat_title] = chat_info["Category"].apply(lambda x: "V" if cat in x else "")
         chat_info.drop(columns=["Category"], inplace=True)
         chat_info["Added Time"] = pd.to_datetime(chat_info["Added Time"], unit="ms")
+        chat_info["Description"] = chat_info.pop("Description")
 
         # start writing to the google sheet
+        dashboard = ws.get_as_df()[["Name", "Type"]]
+        dashboard["sort"] = range(len(dashboard))
+        chat_info = (
+            chat_info.merge(dashboard, on=["Name", "Type"], how="left")
+            .sort_values("sort", na_position="last")
+            .drop(columns="sort")
+        )
+
         ws.clear()
         ws.set_dataframe(chat_info, start="A1", copy_index=False, copy_head=True)
 
@@ -103,6 +121,9 @@ async def update_chat_dashboard(direction: str = "pull", **kwargs):
         Category is the column between Description and Label
         """
         chat_info = gc_client.get_ws(name="TG Chat Info", to_type="df")  # .drop(columns=[""])
+        if "Description" not in chat_info.columns:
+            chat_info["Description"] = ""
+
         category = list(chat_info.columns)[
             chat_info.columns.get_loc("Label") + 1 : chat_info.columns.get_loc("Description")
         ]
@@ -129,6 +150,7 @@ async def update_chat_dashboard(direction: str = "pull", **kwargs):
                     language=new_data["language"],
                     category=new_data["category"],
                     label=new_data["label"],
+                    description=new_data["description"],
                 )
             )
 

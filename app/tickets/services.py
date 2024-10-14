@@ -93,6 +93,9 @@ async def create_ticket(params: CreateTicketParams):
             )
         params.ticket["old_content_text"] = old_ticket["content_text"]
         params.ticket["old_annc_type"] = old_ticket["annc_type"]
+        params.ticket["old_content_html"] = old_ticket["content_html"]
+        params.ticket["old_content_md"] = old_ticket["content_md"]
+        params.ticket["old_file_path"] = old_ticket["file_path"]
         params.ticket["chats"] = old_ticket["success_chats"]
     ticket = ticket_type[params.action](**params.ticket)
 
@@ -204,6 +207,7 @@ async def update_ticket_dashboard():
         "creator_name": "Creator Name",
         "created_timestamp": "Created Time",
         "approver_name": "Approver Name",
+        "status": "Status",
         "status_changed_timestamp": "Operation Time",
         "chats": "Available Chats",
         "success_chats": "Success Chats",
@@ -226,7 +230,7 @@ async def update_ticket_dashboard():
         post_ws = gc_client.get_ws(name="Announcement History", to_type="ws")
         post_ws.clear()
         post_ws.set_dataframe(
-            post_tickets[columns_map.values()],
+            post_tickets[columns_map.values()].fillna(""),
             start="A1",
             copy_index=False,
             copy_head=True,
@@ -265,7 +269,7 @@ async def update_ticket_dashboard():
         edit_ws = gc_client.get_ws(name="Edit History", to_type="ws")
         edit_ws.clear()
         edit_ws.set_dataframe(
-            edit_tickets[columns_map.values()],
+            edit_tickets[columns_map.values()].fillna(""),
             start="A1",
             copy_index=False,
             copy_head=True,
@@ -304,7 +308,7 @@ async def update_ticket_dashboard():
         delete = gc_client.get_ws(name="Delete History", to_type="ws")
         delete.clear()
         delete.set_dataframe(
-            delete_tickets[columns_map.values()],
+            delete_tickets[columns_map.values()].fillna(""),
             start="A1",
             copy_index=False,
             copy_head=True,

@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
@@ -19,16 +19,24 @@ router = APIRouter(dependencies=[Depends(verify_api_key)])
 
 @router.get("/info")
 async def get_chat_info_route(
-    chat_id: Optional[str] = Query(None),
-    name: Optional[str] = Query(None),
+    chat_id: Optional[Union[list[str], str]] = Query(None),
+    name: Optional[Union[list[str], str]] = Query(None),
     chat_type: Optional[str] = Query(None),
     language: Optional[List[str]] = Query(None),
     category: Optional[List[str]] = Query(None),
     label: Optional[List[str]] = Query(None),
-    num: Optional[int] = Query(100),
+    active: Optional[bool] = True,
+    num: Optional[int] = Query(1000),
 ):
     params = ChatInfoParams(
-        chat_id=chat_id, name=name, chat_type=chat_type, language=language, category=category, label=label, num=num
+        chat_id=chat_id,
+        name=name,
+        chat_type=chat_type,
+        language=language,
+        category=category,
+        label=label,
+        num=num,
+        active=active,
     )
     try:
         res = await get_chat_info(params)

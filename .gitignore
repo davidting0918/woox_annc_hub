@@ -3,6 +3,10 @@ __pycache__
 .vscode
 app/.env
 app/.env.development
+bot/.env
 .idea
 gc_config.json
 .DS_Store
+bot/log
+bot/db/files
+misc.py
