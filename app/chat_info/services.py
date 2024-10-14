@@ -100,9 +100,17 @@ async def update_chat_dashboard(direction: str = "pull", **kwargs):
             chat_info[cat_title] = chat_info["Category"].apply(lambda x: "V" if cat in x else "")
         chat_info.drop(columns=["Category"], inplace=True)
         chat_info["Added Time"] = pd.to_datetime(chat_info["Added Time"], unit="ms")
+        chat_info["Description"] = chat_info.pop("Description")
 
         # start writing to the google sheet
-        # TODO: need to keep the original order of the chat info on the google sheet, new chat will be added to the end
+        dashboard = ws.get_as_df()[["Name", "Type"]]
+        dashboard["sort"] = range(len(dashboard))
+        chat_info = (
+            chat_info.merge(dashboard, on=["Name", "Type"], how="left")
+            .sort_values("sort", na_position="last")
+            .drop(columns="sort")
+        )
+
         ws.clear()
         ws.set_dataframe(chat_info, start="A1", copy_index=False, copy_head=True)
 
