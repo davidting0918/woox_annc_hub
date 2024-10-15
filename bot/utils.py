@@ -5,9 +5,11 @@ import os
 import requests as req
 from telegram import Bot
 
+cp = os.path.dirname(os.path.realpath(__file__))
+
 
 def get_logger(name: str):
-    log_path_map = {"EventBot": "log/event_bot.log", "CommandBot": "log/command_bot.log"}
+    log_path_map = {"EventBot": f"{cp}/log/event_bot.log", "CommandBot": f"{cp}/log/command_bot.log"}
     logger = logging.getLogger(name)
 
     formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")

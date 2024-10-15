@@ -18,6 +18,7 @@ from bot.lib.adaptor import AnnouncementClient as ac
 CATEGORY, LANGUAGE, LABEL, CONTENT = range(4)
 EDIT_TICKET_ID, EDIT_NEW_CONTENT = range(2)
 DELETE_TICKET_ID = range(1)
+OPERATION, PERMISSION, USER = range(3)
 
 
 class CommandBot:
@@ -117,7 +118,9 @@ class CommandBot:
                 f"<b>Annc ID:</b> <code>{data['old_ticket_id']}</code>\n"
                 f"<b>Creator:</b> {data['creator_name']}\n"
                 f"<b>Operator:</b> {data['approver_name']}\n"
-                f"<b>Chat numbers:</b> {len(data['chats'])}\n"
+                f"<b>Expected Chat numbers:</b> {len(data['chats']) if data['status'] == 'approved' else 0}\n"
+                f"<b>Succeed Chat numbers:</b> {len(data['success_chats'])}\n"
+                f"<b>Failed Chat numbers:</b> {len(data['failed_chats'])}\n"
                 f"<b>Original Contents:</b>\n\n"
                 f"{data['old_content_html']}\n\n"
                 f"<b>New Contents:</b>\n\n"
@@ -159,6 +162,7 @@ class CommandBot:
             await update.message.reply_text(f"Hi {operator.full_name}, You are not in the whitelist")
             return ConversationHandler.END
 
+        self.client.update_user_dashboard()
         res = self.client.update_chats_dashboard(direction="pull")
 
         # Create category button, two choice per row
@@ -637,6 +641,104 @@ class CommandBot:
         self.logger.info(f"Delete ticket `{ticket_id}` ticket {action} by {operator.full_name}({operator.id})")
         return ConversationHandler.END
 
+    async def change_permission(self, update: Update, context: ContextTypes) -> None:
+        """
+        Change permission of individual user
+        - Add admin and whitelist user process :
+            1. use /change_permission command to start the process
+            2. select `add` button from the keyboard (`add` or `remove` button)
+            3. select `admin` or `whitelist` or `both` button from the keyboard
+            4. share a message sent by the user to add as admin or whitelist user
+            5. ask current admin users to approve the request
+        """
+        operator = update.message.from_user
+        self.client.update_user_dashboard()
+
+        if not self.client.is_admin(user_id=str(operator.id))["data"]:
+            return ConversationHandler.END
+
+        context.user_data["creator_id"] = str(operator.id)
+        context.user_data["creator_name"] = operator.full_name
+
+        callback = [
+            [InlineKeyboardButton("Add", callback_data="add")],
+            [InlineKeyboardButton("Remove", callback_data="remove")],
+        ]
+        reply_markup = InlineKeyboardMarkup(callback)
+        message = f"Hello {operator.full_name}! Please choose the operation you want to perform."
+        await update.message.reply_text(message, reply_markup=reply_markup)
+        return OPERATION
+
+    async def choose_operation(self, update: Update, context: ContextTypes) -> int:
+        query = update.callback_query
+        operation = query.data
+        context.user_data["operation"] = operation
+        callback = [
+            InlineKeyboardButton("Admin", callback_data="admin"),
+            InlineKeyboardButton("Whitelist", callback_data="whitelist"),
+            InlineKeyboardButton("Both", callback_data="admin_whitelist"),
+        ]
+
+        message = f"You have chosen to `{operation.capitalize()}` permission, please choose the permission type\."
+        await query.message.edit_text(message, reply_markup=InlineKeyboardMarkup([callback]), parse_mode="MarkdownV2")
+        return PERMISSION
+
+    async def choose_permission(self, update: Update, context: ContextTypes) -> int:
+        query = update.callback_query
+        operation: str = context.user_data["operation"]
+        permissions: list = query.data.split("_")
+
+        context.user_data["permissions"] = permissions
+
+        message = f"Please share the message sent by the user to `{operation.capitalize()}`  as `{', '.join(permissions)}` user\."
+        await query.message.edit_text(message, parse_mode="MarkdownV2")
+        return USER
+
+    async def input_user(self, update: Update, context: ContextTypes) -> None:
+        def parse_permission(operation: str, permissions: list) -> dict:
+            if operation == "add":
+                return {"admin": "admin" in permissions, "whitelist": "whitelist" in permissions}
+            else:
+                return {"admin": "admin" not in permissions, "whitelist": "whitelist" not in permissions}
+
+        try:
+            user = update.message.forward_origin.sender_user
+        except AttributeError:
+            message = "The user does not open the privacy settings, please ask the user to open the privacy settings then try again\."
+            await update.message.reply_text(message, parse_mode="MarkdownV2")
+            return USER
+
+        # determine whether the user is already in the db, if so the update, if not use create
+        res = self.client.get_user_info(user_id=str(user.id))
+        input_ = parse_permission(context.user_data["operation"], context.user_data["permissions"])
+        input_.update(
+            {
+                "user_id": str(user.id),
+                "name": user.full_name,
+            }
+        )
+
+        if not res["data"]:
+            res = self.client.create_user(**input_)
+        else:
+            res = self.client.update_user(**input_)
+
+        if res["status"] == 1:
+            message = f"User {user.full_name} has been successfully {context.user_data['operation']}ed as {', '.join(context.user_data['permissions'])} user\."
+            await update.message.reply_text(message, parse_mode="MarkdownV2")
+            self.logger.info(
+                f"User {user.full_name}({user.id}) has been successfully {context.user_data['operation']}ed as {', '.join(context.user_data['permissions'])} user\."
+            )
+        else:
+            message = f"Failed to {context.user_data['operation']} user {user.full_name} as {', '.join(context.user_data['permissions'])} user\.\n{res}"
+            await update.message.reply_text(message, parse_mode="MarkdownV2")
+            self.logger.error(
+                f"Failed to {context.user_data['operation']} user {user.full_name} as {', '.join(context.user_data['permissions'])} user\.\n{res}"
+            )
+
+        self.client.update_user_dashboard()
+        return ConversationHandler.END
+
     async def cancel(self, update: Update, context: ContextTypes) -> int:
         operator = update.message.from_user
 
@@ -644,6 +746,34 @@ class CommandBot:
 
         await update.message.reply_text(message)
         return ConversationHandler.END
+
+    async def help(self, update: Update, context: ContextTypes) -> None:
+        operator = update.message.from_user
+
+        if self.client.in_whitelist(user_id=str(operator.id))["data"]:
+            message = """
+🤖 **Welcome to the Announcement Bot**\! 🎉
+
+[**Chat Information Link**](https://docs.google.com/spreadsheets/d/1k2P8Ok0O6d9J3_WWDiEbmKpIkKrWYG96gB52zrEGOf0/edit?gid=757350336#gid=757350336)
+[**Announcement History Link**](https://docs.google.com/spreadsheets/d/1k2P8Ok0O6d9J3_WWDiEbmKpIkKrWYG96gB52zrEGOf0/edit?gid=0#gid=0)
+[**User Permission Link**](https://docs.google.com/spreadsheets/d/1k2P8Ok0O6d9J3_WWDiEbmKpIkKrWYG96gB52zrEGOf0/edit?gid=779015543#gid=779015543)
+👉 Follow these steps to post your announcement:
+
+1\. **Start**: Type `/post` to begin\.
+2\. **Choose Category**: Tap on your announcement category from the list\.
+    \- If not listed, select `Others`\.
+3\. **Language & Labels**:
+    \- For standard categories, choose a language \(English or Chinese\)\.
+    \- For `Others`, type the labels or chat names, one per line\.
+4\. **Add Content**: Send your announcement text, photo, or video\.
+5\. **Review & Send**: Admin will review your announcement and then post it upon approval\.
+6\. **Cancel**: Type `/cancel` anytime to stop\.
+
+🔒 You need to be whitelisted to use this bot\. If you're not, you'll be notified\.
+
+💡 Any issues or questions? Reach out to our support team for help\!
+        """
+            await update.message.reply_text(message, parse_mode="MarkdownV2")
 
     def run(self) -> None:
         self.logger.info(f"Starting {self.name}...")
@@ -702,6 +832,24 @@ class CommandBot:
         )
         confirm_delete_handler = CallbackQueryHandler(self.confirm_delete, pattern="^(delete_approve|delete_reject)_.*")
 
+        # change user permission pipeline
+        change_permission_handler = ConversationHandler(
+            entry_points=[CommandHandler("change_permission", self.change_permission)],
+            states={
+                OPERATION: [
+                    CommandHandler("cancel", self.cancel),
+                    CallbackQueryHandler(self.choose_operation, pattern="^(add|remove)$"),
+                ],
+                PERMISSION: [
+                    CommandHandler("cancel", self.cancel),
+                    CallbackQueryHandler(self.choose_permission, pattern="^(admin|whitelist|admin_whitelist)$"),
+                ],
+                USER: [CommandHandler("cancel", self.cancel), MessageHandler(filters.TEXT, self.input_user)],
+            },
+            fallbacks=[CommandHandler("cancel", self.cancel)],
+            per_chat=False,
+        )
+
         # confirm post announcement pipeline
         app.add_handler(post_handler)
         app.add_handler(confirm_post_handler)
@@ -709,6 +857,10 @@ class CommandBot:
         app.add_handler(confirm_edit_handler)
         app.add_handler(delete_handler)
         app.add_handler(confirm_delete_handler)
+        app.add_handler(change_permission_handler)
+
+        # some single handler
+        app.add_handler(CommandHandler("help", self.help))
         app.run_polling()
 
 

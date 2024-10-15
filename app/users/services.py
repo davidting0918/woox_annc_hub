@@ -65,11 +65,14 @@ async def update_user_dashboard():
     dashboard = gc_client.get_ws(name="TG User Permission", to_type="ws")
     permissions = pd.DataFrame(
         await client.find_many(collection, query={"$or": [{"admin": True}, {"whitelist": True}]})
-    ).drop(columns=["user_id"])
+    )
     permissions["created_timestamp"] = pd.to_datetime(permissions["created_timestamp"], unit="ms")
     permissions["updated_timestamp"] = pd.to_datetime(permissions["updated_timestamp"], unit="ms")
     permissions["admin"] = permissions["admin"].map({True: "V", False: ""})
     permissions["whitelist"] = permissions["whitelist"].map({True: "V", False: ""})
+    permissions = permissions[
+        ["user_id", "name", "admin", "whitelist", "created_timestamp", "updated_timestamp"]
+    ].sort_values("created_timestamp", ascending=False)
 
     permissions.columns = [c.replace("_", " ").title() for c in permissions.columns]
     dashboard.clear()

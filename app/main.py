@@ -1,5 +1,6 @@
 # app/main.py
 import logging
+import os
 from argparse import ArgumentParser
 from logging.handlers import TimedRotatingFileHandler
 
@@ -12,6 +13,8 @@ from app.config.setting import settings as s
 from app.tickets.routes import router as tickets_router
 from app.users.routes import router as users_router
 
+cp = os.path.dirname(os.path.realpath(__file__))
+
 
 def setup_logger(name: str):
     logger = logging.getLogger(name)
@@ -19,7 +22,7 @@ def setup_logger(name: str):
 
     # create handler for each log a day
     handler = TimedRotatingFileHandler(
-        "logs/main.log",
+        f"{cp}/logs/main.log",
         when="midnight",
         interval=1,
     )
@@ -43,7 +46,8 @@ def create_app(is_test: bool = False):
     async def log_requests(request, call_next):
         auth_key = request.headers.get("X-API-KEY", "No API Key")
         params = request.query_params if request.method == "GET" else await request.json()
-        logger.info(f"Request received: {request.method} - {request.url.path} - {params} - {auth_key}")
+        client_ip = request.client.host if request.client else "Unknown IP"
+        logger.info(f"Request received: {request.method} - {request.url.path} - {params} - {auth_key} - {client_ip}")
         response = await call_next(request)
         logger.info(f"Response sent: {response.status_code}")
         return response

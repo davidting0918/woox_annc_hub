@@ -79,6 +79,10 @@ class AnnouncementClient:
         url = f"{self.base_url}/users/is_admin"
         return self._get(url, params=kwargs)
 
+    def update_user_dashboard(self, **kwargs):
+        url = f"{self.base_url}/users/update_dashboard"
+        return self._get(url, params=kwargs)
+
     # ticket related
     def create_ticket(self, **kwargs):
         url = f"{self.base_url}/tickets/create"
