@@ -14,8 +14,10 @@ gc_client = GCClient()
 async def create_chat(chat: Chat):
     res = await client.find_one(collection, query={"chat_id": chat.chat_id})
     if res:
-        raise HTTPException(status_code=400, detail=f"Chat already exists with id `{chat.chat_id}`")
-
+        if res["active"]:
+            raise HTTPException(status_code=400, detail=f"Chat already exists with id `{chat.chat_id}`")
+        else:
+            return await update_chat_info(UpdateChatInfo(chat_id=chat.chat_id, active=True))
     return await client.insert_one(collection, chat.model_dump())
 
 
@@ -100,7 +102,7 @@ async def update_chat_dashboard(direction: str = "pull", **kwargs):
             chat_info[cat_title] = chat_info["Category"].apply(lambda x: "V" if cat in x else "")
         chat_info.drop(columns=["Category"], inplace=True)
         chat_info["Added Time"] = pd.to_datetime(chat_info["Added Time"], unit="ms")
-        chat_info["Description"] = chat_info.pop("Description")
+        chat_info["Description"] = chat_info.pop("Description").fillna("")
 
         # start writing to the google sheet
         dashboard = ws.get_as_df()[["Name", "Type"]]

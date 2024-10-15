@@ -1,12 +1,12 @@
 venv
 __pycache__
 .vscode
-app/.env
-app/.env.development
-bot/.env
 .idea
 gc_config.json
 .DS_Store
+app/.env
+app/logs
 bot/log
 bot/db/files
+bot/.env
 misc.py
