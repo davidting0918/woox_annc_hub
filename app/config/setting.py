@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     dashboard_url: str
     is_test: bool = False
 
-    model_config = ConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = ConfigDict(env_file="app/.env", env_file_encoding="utf-8")
 
 
 settings = Settings()

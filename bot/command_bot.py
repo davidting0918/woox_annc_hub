@@ -117,7 +117,9 @@ class CommandBot:
                 f"<b>Annc ID:</b> <code>{data['old_ticket_id']}</code>\n"
                 f"<b>Creator:</b> {data['creator_name']}\n"
                 f"<b>Operator:</b> {data['approver_name']}\n"
-                f"<b>Chat numbers:</b> {len(data['chats'])}\n"
+                f"<b>Expected Chat numbers:</b> {len(data['chats']) if data['status'] == 'approved' else 0}\n"
+                f"<b>Succeed Chat numbers:</b> {len(data['success_chats'])}\n"
+                f"<b>Failed Chat numbers:</b> {len(data['failed_chats'])}\n"
                 f"<b>Original Contents:</b>\n\n"
                 f"{data['old_content_html']}\n\n"
                 f"<b>New Contents:</b>\n\n"
@@ -159,6 +161,7 @@ class CommandBot:
             await update.message.reply_text(f"Hi {operator.full_name}, You are not in the whitelist")
             return ConversationHandler.END
 
+        self.client.update_user_dashboard()
         res = self.client.update_chats_dashboard(direction="pull")
 
         # Create category button, two choice per row
@@ -645,6 +648,34 @@ class CommandBot:
         await update.message.reply_text(message)
         return ConversationHandler.END
 
+    async def help(self, update: Update, context: ContextTypes) -> None:
+        operator = update.message.from_user
+
+        if self.client.in_whitelist(user_id=str(operator.id))["data"]:
+            message = """
+🤖 **Welcome to the Announcement Bot**\! 🎉
+
+[**Chat Information Link**](https://docs.google.com/spreadsheets/d/1k2P8Ok0O6d9J3_WWDiEbmKpIkKrWYG96gB52zrEGOf0/edit?gid=757350336#gid=757350336)
+[**Announcement History Link**](https://docs.google.com/spreadsheets/d/1k2P8Ok0O6d9J3_WWDiEbmKpIkKrWYG96gB52zrEGOf0/edit?gid=0#gid=0)
+[**User Permission Link**](https://docs.google.com/spreadsheets/d/1k2P8Ok0O6d9J3_WWDiEbmKpIkKrWYG96gB52zrEGOf0/edit?gid=779015543#gid=779015543)
+👉 Follow these steps to post your announcement:
+
+1\. **Start**: Type `/post` to begin\.
+2\. **Choose Category**: Tap on your announcement category from the list\.
+    \- If not listed, select `Others`\.
+3\. **Language & Labels**:
+    \- For standard categories, choose a language \(English or Chinese\)\.
+    \- For `Others`, type the labels or chat names, one per line\.
+4\. **Add Content**: Send your announcement text, photo, or video\.
+5\. **Review & Send**: Admin will review your announcement and then post it upon approval\.
+6\. **Cancel**: Type `/cancel` anytime to stop\.
+
+🔒 You need to be whitelisted to use this bot\. If you're not, you'll be notified\.
+
+💡 Any issues or questions? Reach out to our support team for help\!
+        """
+            await update.message.reply_text(message, parse_mode="MarkdownV2")
+
     def run(self) -> None:
         self.logger.info(f"Starting {self.name}...")
         app = Application.builder().token(self.bot_key).build()
@@ -709,6 +740,9 @@ class CommandBot:
         app.add_handler(confirm_edit_handler)
         app.add_handler(delete_handler)
         app.add_handler(confirm_delete_handler)
+
+        # some single handler
+        app.add_handler(CommandHandler("help", self.help))
         app.run_polling()
 
 

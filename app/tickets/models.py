@@ -130,23 +130,21 @@ class PostTicket(Ticket):
         async def send_message(chat):
             try:
                 if self.annc_type == AnncType.text:
-                    message = await bot.send_message(
-                        chat_id=chat["chat_id"], text=self.content_md, parse_mode="MarkdownV2"
-                    )
+                    message = await bot.send_message(chat_id=chat["chat_id"], text=self.content_html, parse_mode="HTML")
                 elif self.annc_type == AnncType.image:
                     message = await bot.send_photo(
-                        chat_id=chat["chat_id"], photo=self.file_path, caption=self.content_md, parse_mode="MarkdownV2"
+                        chat_id=chat["chat_id"], photo=self.file_path, caption=self.content_html, parse_mode="HTML"
                     )
                 elif self.annc_type == AnncType.video:
                     message = await bot.send_video(
-                        chat_id=chat["chat_id"], video=self.file_path, caption=self.content_md, parse_mode="MarkdownV2"
+                        chat_id=chat["chat_id"], video=self.file_path, caption=self.content_html, parse_mode="HTML"
                     )
                 else:
                     message = await bot.send_document(
                         chat_id=chat["chat_id"],
                         document=self.file_path,
-                        caption=self.content_md,
-                        parse_mode="MarkdownV2",
+                        caption=self.content_html,
+                        parse_mode="HTML",
                     )
                 return {
                     "chat_id": str(message.chat.id),
