@@ -96,7 +96,7 @@ class EventBot:
 
         update_ = {
             "chat_id": str(chat.id),
-            "chat_name": str(chat.title),
+            "name": str(chat.title),
         }
         res = self.client.update_chat(**update_)
         self.client.update_chats_dashboard(direction="push")

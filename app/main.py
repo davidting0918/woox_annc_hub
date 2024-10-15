@@ -42,7 +42,8 @@ def create_app(is_test: bool = False):
     @app.middleware("http")
     async def log_requests(request, call_next):
         auth_key = request.headers.get("X-API-KEY", "No API Key")
-        logger.info(f"Request received: {request.method} - {request.url.path} - {auth_key}")
+        params = request.query_params if request.method == "GET" else await request.json()
+        logger.info(f"Request received: {request.method} - {request.url.path} - {params} - {auth_key}")
         response = await call_next(request)
         logger.info(f"Response sent: {response.status_code}")
         return response
