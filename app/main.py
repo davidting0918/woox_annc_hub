@@ -1,5 +1,7 @@
 # app/main.py
+import logging
 from argparse import ArgumentParser
+from logging.handlers import TimedRotatingFileHandler
 
 import uvicorn
 from fastapi import FastAPI
@@ -11,10 +13,39 @@ from app.tickets.routes import router as tickets_router
 from app.users.routes import router as users_router
 
 
+def setup_logger(name: str):
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+
+    # create handler for each log a day
+    handler = TimedRotatingFileHandler(
+        "logs/main.log",
+        when="midnight",
+        interval=1,
+    )
+
+    # create formatter
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    handler.setFormatter(formatter)
+
+    # add handler to logger
+    logger.addHandler(handler)
+    return logger
+
+
 # create app
 def create_app(is_test: bool = False):
     s.is_test = is_test
     app = FastAPI()
+    logger = setup_logger("main")
+
+    @app.middleware("http")
+    async def log_requests(request, call_next):
+        auth_key = request.headers.get("X-API-KEY", "No API Key")
+        logger.info(f"Request received: {request.method} - {request.url.path} - {auth_key}")
+        response = await call_next(request)
+        logger.info(f"Response sent: {response.status_code}")
+        return response
 
     app.include_router(users_router, prefix="/users", tags=["Users"])
     app.include_router(chat_info_router, prefix="/chats", tags=["Chats"])
