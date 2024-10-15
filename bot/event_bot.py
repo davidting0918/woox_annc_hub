@@ -9,6 +9,7 @@ from telegram.ext import (
     MessageHandler,
     filters,
 )
+from dotenv import load_dotenv
 from utils import get_logger, init_args
 
 
@@ -118,6 +119,7 @@ class EventBot:
 
 
 if __name__ == "__main__":
+    load_dotenv()
     args = init_args("EventBot")
     event_bot = EventBot(
         bot_key=os.getenv("EVENT_BOT_TOKEN"),
