@@ -1,85 +1,59 @@
-# woox_annc_hub
-# API Documentation for Announcement System
+# Table of Contents
+1. [API Documentation](#api-documentation)
+2. [Bot Process](#bot-process)
 
-## Table of Contents
-1. [Introduction](#introduction)
-2. [Base URL](#base-url)
-3. [Authentication](#authentication)
-4. [Endpoints](#endpoints)
-   - [Users](#users)
-     - [Get Users Information](#get-users-information)
-     - [Create User](#create-user)
-     - [Delete User](#delete-user)
-     - [Update User Information](#update-user-information)
-   - [Tickets](#tickets)
-     - [Get Ticket Information](#get-ticket-information)
-     - [Create Ticket](#create-ticket)
-     - [Approve Ticket](#approve-ticket)
-     - [Reject Ticket](#reject-ticket)
-     - [Delete Ticket](#delete-ticket)
-   - [Chats](#chats)
-     - [Get Chat Information](#get-chat-information)
-     - [Create Chat](#create-chat)
-     - [Update Chat Information](#update-chat-information)
-     - [Delete Chat](#delete-chat)
-5. [Error Handling](#error-handling)
-6. [Rate Limiting](#rate-limiting)
+##  API Documentation
 
-## Introduction
-This document provides documentation for the Announcement System API. The API is built using FastAPI and provides endpoints for managing users, tickets, and chats.
-
-## Base URL
-The base URL for all API endpoints is:
+### Base URL
 ```
-https://woox-annc-hub-api-b46c8e32ff33.herokuapp.com
+http://localhost:8000
 ```
 
-## Authentication
-All endpoints require API key authentication. To access the API, you need to include two headers in your requests:
-
-- `X-API-KEY`: Your API key
-- `X-API-SECRET`: Your API secret
-
-To obtain an API key and secret, please contact the development team. The API key creation endpoint is not publicly accessible for security reasons.
-
-Example of including the headers in a curl request:
+### Authentication Header (Required for all endpoints):
 ```
-curl -H "X-API-KEY: your_api_key" -H "X-API-SECRET: your_api_secret" https://woox-annc-hub-api-b46c8e32ff33.herokuapp.com/endpoint
+X-API-KEY: your-api-key
+X-API-SECRET: your-api-secret
 ```
 
-If the API key or secret is invalid, the API will return a 403 Forbidden error.
+### API Structure
+1. [Users API](#users-api)
+   1. [Get User Information](#1-get-user-information)
+   2. [Check Whitelist Status](#2-check-whitelist-status)
+   3. [Check Admin Status](#3-check-admin-status)
+   4. [Update User Dashboard](#4-update-user-dashboard)
+   5. [Create User](#5-create-user)
+   6. [Delete User](#6-delete-user)
+   7. [Update User](#7-update-user)
+2. [Chats API](#chats-api)
+   1. [Get Chat Information](#1-get-chat-information)
+   2. [Update Chat Dashboard](#2-update-chat-dashboard)
+   3. [Create Chat](#3-create-chat)
+   4. [Update Chat](#4-update-chat)
+   5. [Delete Chat](#5-delete-chat)
+3. [Tickets API](#tickets-api)
+   1. [Get Ticket Information](#1-get-ticket-information)
+   2. [Update Ticket Dashboard](#2-update-ticket-dashboard)
+   3. [Create Ticket](#3-create-ticket)
+   4. [Approve Ticket](#4-approve-ticket)
+   5. [Reject Ticket](#5-reject-ticket)
+   6. [Delete Ticket](#6-delete-ticket)
+   7. [Update Ticket](#7-update-ticket)
 
-## Endpoints
+### 1. Get User Information
+```http
+GET /users/info
+```
 
-### Users
-Prefix: `/users`
+#### Query Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| user_id | string | No | Filter by specific user ID |
+| name | string | No | Filter by user name |
+| admin | boolean | No | Filter by admin status |
+| whitelist | boolean | No | Filter by whitelist status |
+| num | integer | No | Number of results (default: 100) |
 
-#### Get Users Information
-Retrieves information about users based on specified parameters.
-
-- **URL**: `/users/info`
-- **Method**: `GET`
-- **Authentication**: Required
-
-##### Input Parameters
-
-| Parameter | Type    | Required | Description                           |
-|-----------|---------|----------|---------------------------------------|
-| user_id   | string  | No       | Filter by user ID                     |
-| name      | string  | No       | Filter by user name                   |
-| admin     | boolean | No       | Filter by admin status                |
-| whitelist | boolean | No       | Filter by whitelist status            |
-| num       | integer | No       | Number of results to return (default: 100) |
-
-##### Output Format
-
-| Field   | Type   | Description                  |
-|---------|--------|------------------------------|
-| status  | integer| Status code (1 for success)  |
-| data    | array  | Array of user objects        |
-
-##### Example Output
-
+#### Example Response
 ```json
 {
   "status": 1,
@@ -87,559 +61,107 @@ Retrieves information about users based on specified parameters.
     {
       "user_id": "12345",
       "name": "John Doe",
-      "admin": false,
-      "whitelist": true,
-      "created_timestamp": 1631234567890,
-      "updated_timestamp": 1631234567890
-    },
-    {
-      "user_id": "67890",
-      "name": "Jane Smith",
       "admin": true,
       "whitelist": true,
-      "created_timestamp": 1631234567891,
-      "updated_timestamp": 1631234567891
+      "created_timestamp": 1634567890000,
+      "updated_timestamp": 1634567890000
     }
   ]
 }
 ```
 
-#### Create User
-Creates a new user.
+### 2. Check Whitelist Status
+```http
+GET /users/in_whitelist
+```
 
-- **URL**: `/users/create`
-- **Method**: `POST`
-- **Authentication**: Required
+#### Query Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| user_id | string | Yes | User ID to check whitelist status |
 
-##### Input Parameters
-
-| Parameter | Type    | Required | Description        |
-|-----------|---------|----------|--------------------|
-| user_id   | string  | Yes      | Unique user ID     |
-| name      | string  | Yes      | User's name        |
-| admin     | boolean | No       | Admin status       |
-| whitelist | boolean | No       | Whitelist status   |
-
-##### Output Format
-
-| Field   | Type   | Description                  |
-|---------|--------|------------------------------|
-| status  | integer| Status code (1 for success)  |
-| data    | object | Object containing inserted_id|
-
-##### Example Output
-
+#### Example Response
 ```json
 {
   "status": 1,
-  "data": {
-    "inserted_id": "60f1a5b9e6b3f1234567890a"
-  }
+  "data": true
 }
 ```
 
-#### Delete User
-Deletes a user by their user ID.
+### 3. Check Admin Status
+```http
+GET /users/is_admin
+```
 
-- **URL**: `/users/delete`
-- **Method**: `POST`
-- **Authentication**: Required
+#### Query Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| user_id | string | Yes | User ID to check admin status |
 
-##### Input Parameters
-
-| Parameter | Type   | Required | Description    |
-|-----------|--------|----------|----------------|
-| user_id   | string | Yes      | User ID to delete |
-
-##### Output Format
-
-| Field   | Type    | Description                  |
-|---------|---------|------------------------------|
-| status  | integer | Status code (1 for success)  |
-| data    | object  | Object containing delete_status |
-
-##### Example Output
-
+#### Example Response
 ```json
 {
   "status": 1,
-  "data": {
-    "delete_status": true
-  }
+  "data": true
 }
 ```
 
-#### Update User Information
-Updates information for a specific user.
-
-- **URL**: `/users/update`
-- **Method**: `POST`
-- **Authentication**: Required
-
-##### Input Parameters
-
-| Parameter | Type    | Required | Description        |
-|-----------|---------|----------|--------------------|
-| user_id   | string  | Yes      | User ID to update  |
-| name      | string  | No       | New name           |
-| admin     | boolean | No       | New admin status   |
-| whitelist | boolean | No       | New whitelist status |
-
-##### Output Format
-
-| Field   | Type    | Description                  |
-|---------|---------|------------------------------|
-| status  | integer | Status code (1 for success)  |
-| data    | object  | Object containing update info|
-
-##### Example Output
-
-```json
-{
-  "status": 1,
-  "data": {
-    "user_id": "12345",
-    "name": "John Doe",
-    "admin": false,
-    "whitelist": true,
-    "updated_timestamp": 1631234567890,
-    "created_timestamp": 1631234567890
-  }
-}
+### 4. Update User Dashboard
+```http
+GET /users/update_dashboard
 ```
 
-### Tickets
-Prefix: `/tickets`
-
-#### Get Ticket Information
-Retrieves information about tickets based on specified parameters.
-
-- **URL**: `/tickets/info`
-- **Method**: `GET`
-- **Authentication**: Required
-
-##### Input Parameters
-
-| Parameter                    | Type    | Required | Description                           |
-|------------------------------|---------|----------|---------------------------------------|
-| ticket_id                    | string  | No       | Filter by ticket ID                   |
-| creator_id                   | string  | No       | Filter by creator ID                  |
-| start_created_timestamp      | integer | No       | Filter by creation start time         |
-| end_created_timestamp        | integer | No       | Filter by creation end time           |
-| start_status_changed_timestamp| integer | No       | Filter by status change start time    |
-| end_status_changed_timestamp  | integer | No       | Filter by status change end time      |
-| status                       | string  | No       | Filter by ticket status               |
-| num                          | integer | No       | Number of results to return (default: 100) |
-
-##### Output Format
-
-| Field     | Type    | Description                  |
-|-----------|---------|------------------------------|
-| status    | integer | Status code (1 for success)  |
-| data_num  | integer | Number of tickets returned   |
-| data      | array   | Array of ticket objects      |
-
-##### Example Output
-
-```json
-{
-  "status": 1,
-  "data_num": 2,
-  "data": [
-    {
-      "ticket_id": "POST-1234567890abcdef",
-      "action": "post_annc",
-      "status": "pending",
-      "creator_id": "12345",
-      "creator_name": "John Doe",
-      "created_timestamp": 1631234567890,
-      "updated_timestamp": 1631234567890,
-      "annc": {
-        "annc_type": "text",
-        "content_text": "This is a test announcement",
-        "category": "general",
-        "language": "en",
-        "chats": ["chat1", "chat2"]
-      }
-    },
-    {
-      "ticket_id": "EDIT-0987654321fedcba",
-      "action": "edit_annc",
-      "status": "approved",
-      "creator_id": "67890",
-      "creator_name": "Jane Smith",
-      "approver_id": "11111",
-      "approver_name": "Admin User",
-      "created_timestamp": 1631234567891,
-      "updated_timestamp": 1631234567892,
-      "status_changed_timestamp": 1631234567892,
-      "old_annc": {
-        "annc_type": "text",
-        "content_text": "Old announcement text",
-        "category": "general",
-        "language": "en",
-        "chats": ["chat1"]
-      },
-      "new_annc": {
-        "annc_type": "text",
-        "content_text": "Updated announcement text",
-        "category": "general",
-        "language": "en",
-        "chats": ["chat1", "chat2"]
-      }
-    }
-  ]
-}
-```
-
-#### Create Ticket
-Creates a new ticket for posting, editing, or deleting an announcement.
-
-- **URL**: `/tickets/create`
-- **Method**: `POST`
-- **Authentication**: Required
-
-##### Input Parameters
-
-| Parameter | Type    | Required | Description        |
-|-----------|---------|----------|--------------------|
-| ticket    | object  | Yes      | Ticket object      |
-
-The `ticket` object should be one of `PostTicket`, `EditTicket`, or `DeleteTicket`, depending on the action.
-
-##### Output Format
-
-| Field   | Type    | Description                  |
-|---------|---------|------------------------------|
-| status  | integer | Status code (1 for success)  |
-| data    | object  | Object containing inserted_id|
-
-##### Example Output
-
-```json
-{
-  "status": 1,
-  "data": {
-    "inserted_id": "60f1a5b9e6b3f1234567890a"
-  }
-}
-```
-
-#### Approve Ticket
-Approves a pending ticket.
-
-- **URL**: `/tickets/approve`
-- **Method**: `POST`
-- **Authentication**: Required
-
-##### Input Parameters
-
-| Parameter | Type   | Required | Description    |
-|-----------|--------|----------|----------------|
-| ticket_id | string | Yes      | Ticket ID to approve |
-| user_id   | string | Yes      | User ID of the approver |
-
-##### Output Format
-
-| Field   | Type    | Description                  |
-|---------|---------|------------------------------|
-| status  | integer | Status code (1 for success)  |
-| data    | object  | Object containing update info|
-
-##### Example Output
-
-```json
-{
-    "status": 1,
-    "data": {
-        "created_timestamp": 1725781699347,
-        "updated_timestamp": 1725781700153,
-        "ticket_id": "POST-9ae761f9f78f4cf6a238a9fc59caf747",
-        "action": "post_annc",
-        "status": "approved",
-        "creator_id": "test-123",
-        "creator_name": "test",
-        "approver_id": "dev-test",
-        "approver_name": "dev-test",
-        "status_changed_timestamp": 1725781700153,
-        "annc": {
-            "annc_type": "text",
-            "content_text": "This is a test announcement",
-            "content_html": "<p>This is a test announcement</p>",
-            "content_md": "This is a test announcement",
-            "file_id": null,
-            "category": "test",
-            "language": "en",
-            "label": ["test"],
-            "chats": ["test-123"],
-            "actual_chats": ["test-123"]
-        }
-    }
-}
-```
-
-#### Reject Ticket
-Rejects a pending ticket.
-
-- **URL**: `/tickets/reject`
-- **Method**: `POST`
-- **Authentication**: Required
-
-##### Input Parameters
-
-| Parameter | Type   | Required | Description    |
-|-----------|--------|----------|----------------|
-| ticket_id | string | Yes      | Ticket ID to reject |
-| user_id   | string | Yes      | User ID of the rejector |
-
-##### Output Format
-
-| Field   | Type    | Description                  |
-|---------|---------|------------------------------|
-| status  | integer | Status code (1 for success)  |
-| data    | object  | Object containing update info|
-
-##### Example Output
-
-```json
-{
-    "status": 1,
-    "data": {
-        "created_timestamp": 1725782033733,
-        "updated_timestamp": 1725782034565,
-        "ticket_id": "POST-0b4743055dd544ba81d09dea6df56fe8",
-        "action": "post_annc",
-        "status": "rejected",
-        "creator_id": "test-123",
-        "creator_name": "test",
-        "approver_id": "dev-test",
-        "approver_name": "dev-test",
-        "status_changed_timestamp": 1725782034565,
-        "annc": {
-            "annc_type": "text",
-            "content_text": "This is a test announcement",
-            "content_html": "<p>This is a test announcement</p>",
-            "content_md": "This is a test announcement",
-            "file_id": null,
-            "category": "test",
-            "language": "en",
-            "label": ["test"],
-            "chats": ["test-123"],
-            "actual_chats": ["test-123"]
-        }
-    }
-}
-```
-
-#### Delete Ticket
-Deletes a ticket.
-
-- **URL**: `/tickets/delete`
-- **Method**: `POST`
-- **Authentication**: Required
-
-##### Input Parameters
-
-| Parameter | Type   | Required | Description    |
-|-----------|--------|----------|----------------|
-| ticket_id | string | Yes      | Ticket ID to delete |
-
-##### Output Format
-
-| Field   | Type    | Description                  |
-|---------|---------|------------------------------|
-| status  | integer | Status code (1 for success)  |
-| data    | object  | Object containing delete_status |
-
-##### Example Output
-
-```json
-{
-  "status": 1,
-  "data": {
-    "delete_status": true
-  }
-}
-```
-
-### Chats
-Prefix: `/chats`
-
-#### Get Chat Information
-Retrieves information about chats based on specified parameters.
-
-- **URL**: `/chats/info`
-- **Method**: `GET`
-- **Authentication**: Required
-
-##### Input Parameters
-
-| Parameter | Type    | Required | Description                           |
-|-----------|---------|----------|---------------------------------------|
-| chat_id   | string  | No       | Filter by chat ID                     |
-| name      | string  | No       | Filter by chat name                   |
-| chat_type | string  | No       | Filter by chat type                   |
-| language  | array   | No       | Filter by language(s)                 |
-| category  | array   | No       | Filter by category(ies)               |
-| label     | array   | No       | Filter by label(s)                    |
-| num       | integer | No       | Number of results to return (default: 100) |
-
-##### Output Format
-
-| Field   | Type    | Description                  |
-|---------|---------|------------------------------|
-| status  | integer | Status code (1 for success)  |
-| data    | array   | Array of chat objects        |
-
-##### Example Output
-
+#### Example Response
 ```json
 {
   "status": 1,
   "data": [
     {
-      "chat_id": "123456789",
-      "name": "General Discussion",
-      "chat_type": "group",
-      "language": ["en"],
-      "category": ["general"],
-      "label": ["public"],
-      "active": true,
-      "created_timestamp": 1631234567890,
-      "updated_timestamp": 1631234567890
-    },
-    {
-      "chat_id": "987654321",
-      "name": "Tech News",
-      "chat_type": "channel",
-      "language": ["en", "es"],
-      "category": ["technology"],
-      "label": ["news", "tech"],
-      "active": true,
-      "created_timestamp": 1631234567891,
-      "updated_timestamp": 1631234567891
+      "User Id": "12345",
+      "Name": "John Doe",
+      "Admin": "V",
+      "Whitelist": "V",
+      "Created Timestamp": "2023-10-20 10:30:00",
+      "Updated Timestamp": "2023-10-20 10:30:00"
     }
   ]
 }
 ```
 
-#### Create Chat
-Creates a new chat.
+### 5. Create User
+```http
+POST /users/create
+```
 
-- **URL**: `/chats/create`
-- **Method**: `POST`
-- **Authentication**: Required
+#### Request Body Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| user_id | string | Yes | Unique identifier for the user |
+| name | string | Yes | User's name |
+| admin | boolean | No | Admin status (default: false) |
+| whitelist | boolean | No | Whitelist status (default: true) |
 
-##### Input Parameters
-
-| Parameter | Type    | Required | Description        |
-|-----------|---------|----------|--------------------|
-| chat_id   | string  | Yes      | Unique chat ID     |
-| name      | string  | Yes      | Chat name          |
-| chat_type | string  | Yes      | Chat type          |
-| language  | array   | No       | Chat languages     |
-| category  | array   | No       | Chat categories    |
-| label     | array   | No       | Chat labels        |
-| active    | boolean | No       | Chat active status |
-
-##### Output Format
-
-| Field   | Type    | Description                  |
-|---------|---------|------------------------------|
-| status  | integer | Status code (1 for success)  |
-| data    | object  | Object containing inserted_id|
-
-##### Example Output
-
+#### Example Request
 ```json
 {
-  "status": 1,
-  "data": {
-    "inserted_id": "60f1a5b9e6b3f1234567890a"
-  }
+  "user_id": "12345",
+  "name": "John Doe",
+  "admin": true,
+  "whitelist": true
 }
 ```
 
-#### Update Chat Information
-Updates information for a specific chat.
-
-- **URL**: `/chats/update`
-- **Method**: `POST`
-- **Authentication**: Required
-
-##### Input Parameters
-
-| Parameter | Type    | Required | Description        |
-|-----------|---------|----------|--------------------|
-| chat_id   | string  | Yes      | Chat ID to update  |
-| name      | string  | No       | New chat name      |
-| chat_type | string  | No       | New chat type      |
-| language  | array   | No       | New chat languages |
-| category  | array   | No       | New chat categories|
-| label     | array   | No       | New chat labels    |
-| active    | boolean | No       | New active status  |
-
-##### Output Format
-
-| Field   | Type    | Description                  |
-|---------|---------|------------------------------|
-| status  | integer | Status code (1 for success)  |
-| data    | object  | Object containing update info|
-
-##### Example Output
-
-```json
-{
-  "status": 1,
-  "data": {
-    "chat_id": "test-1725782356",
-    "name": "test chat",
-    "chat_type": "supergroup",
-    "language": [
-      "en",
-      "ch",
-      "jp"
-    ],
-    "category": [
-      "listing",
-      "delisting",
-      "maintenance",
-      "other"
-    ],
-    "label": [
-      "label1",
-      "label2",
-      "label3"
-    ],
-    "active": true,
-    "created_timestamp": 1725782356421,
-    "updated_timestamp": 1725782357344
-  }
-}
+### 6. Delete User
+```http
+POST /users/delete
 ```
 
-#### Delete Chat
-Deletes a chat.
+#### Request Body Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| user_id | string | Yes | ID of user to delete |
 
-- **URL**: `/chats/delete`
-- **Method**: `POST`
-- **Authentication**: Required
-
-##### Input Parameters
-
-| Parameter | Type   | Required | Description    |
-|-----------|--------|----------|----------------|
-| chat_id   | string | Yes      | Chat ID to delete |
-
-##### Output Format
-
-| Field   | Type    | Description                  |
-|---------|---------|------------------------------|
-| status  | integer | Status code (1 for success)  |
-| data    | object  | Object containing delete_status |
-
-##### Example Output
-
+#### Example Response
 ```json
 {
   "status": 1,
@@ -648,3 +170,247 @@ Deletes a chat.
   }
 }
 ```
+
+### 7. Update User
+```http
+POST /users/update
+```
+
+#### Request Body Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| user_id | string | Yes | User ID to update |
+| name | string | No | New name |
+| admin | boolean | No | New admin status |
+| whitelist | boolean | No | New whitelist status |
+
+## Chats API
+Base path: `/chats`
+
+### 1. Get Chat Information
+```http
+GET /chats/info
+```
+
+#### Query Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| chat_id | string/List[string] | No | Filter by chat ID(s) |
+| name | string/List[string] | No | Filter by chat name(s) |
+| chat_type | string | No | Type of chat (group/channel/supergroup) |
+| language | List[string] | No | Filter by language(s) |
+| category | List[string] | No | Filter by category(ies) |
+| label | List[string] | No | Filter by label(s) |
+| active | boolean | No | Filter by active status (default: true) |
+| num | integer | No | Number of results (default: 1000) |
+
+### 2. Update Chat Dashboard
+```http
+GET /chats/update_dashboard
+```
+
+#### Query Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| direction | string | Yes | "pull" or "push" |
+
+#### Example Response
+```json
+{
+  "status": 1,
+  "data": {
+    "post_tickets": [...],
+    "edit_tickets": [...],
+    "delete_tickets": [...]
+  }
+}
+```
+
+### 3. Create Chat
+```http
+POST /chats/create
+```
+
+#### Request Body Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| chat_id | string | Yes | Unique chat identifier |
+| name | string | Yes | Chat name |
+| chat_type | string | Yes | Type (group/channel/supergroup) |
+| language | List[string] | No | List of languages |
+| category | List[string] | No | List of categories |
+| label | List[string] | No | List of labels |
+| active | boolean | No | Active status (default: true) |
+| description | string | No | Chat description |
+
+### 4. Update Chat
+```http
+POST /chats/update
+```
+
+#### Request Body Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| chat_id | string | Yes | Chat ID to update |
+| name | string | No | New chat name |
+| chat_type | string | No | New chat type |
+| language | List[string] | No | New language list |
+| category | List[string] | No | New category list |
+| label | List[string] | No | New label list |
+| active | boolean | No | New active status |
+| description | string | No | New description |
+
+### 5. Delete Chat
+```http
+POST /chats/delete
+```
+
+#### Request Body Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| chat_id | string | Yes | Chat ID to delete |
+
+## Tickets API
+Base path: `/tickets`
+
+### 1. Get Ticket Information
+```http
+GET /tickets/info
+```
+
+#### Query Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| ticket_id | string | No | Filter by ticket ID |
+| creator_id | string | No | Filter by creator ID |
+| start_created_timestamp | integer | No | Filter by creation time start |
+| end_created_timestamp | integer | No | Filter by creation time end |
+| start_status_changed_timestamp | integer | No | Filter by status change time start |
+| end_status_changed_timestamp | integer | No | Filter by status change time end |
+| status | string | No | Filter by status (pending/approved/rejected) |
+| num | integer | No | Number of results (default: 100) |
+
+### 2. Update Ticket Dashboard
+```http
+GET /tickets/update_dashboard
+```
+
+#### Example Response
+```json
+{
+  "status": 1,
+  "data": {
+    "post_tickets": [...],
+    "edit_tickets": [...],
+    "delete_tickets": [...]
+  }
+}
+```
+
+### 3. Create Ticket
+```http
+POST /tickets/create
+```
+
+#### Request Body Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| action | string | Yes | Ticket action (`post_annc`/`edit_annc`/`delete_annc`) |
+| ticket | object | Yes | Ticket details object |
+
+#### Post Announcement Ticket Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| content_text | string | Yes | Plain text content |
+| content_html | string | Yes | HTML formatted content |
+| content_md | string | Yes | Markdown content |
+| annc_type | string | Yes | Type (text/image/video/file) |
+| category | string | No | Announcement category |
+| language | string | No | Announcement language |
+| label | List[string] | No | Announcement labels |
+| file_path | string | No | Media file path |
+
+#### Edit Announcement Ticket Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| old_ticket_id | string | Yes | Original ticket ID |
+| new_content_text | string | Yes | New plain text content |
+| new_content_html | string | Yes | New HTML content |
+| new_content_md | string | Yes | New markdown content |
+
+#### Delete Announcement Ticket Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| old_ticket_id | string | Yes | Ticket ID to delete |
+
+### 4. Approve Ticket
+```http
+POST /tickets/approve
+```
+
+#### Request Body Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| ticket_id | string | Yes | Ticket ID to approve |
+| user_id | string | Yes | Approving user's ID |
+
+### 5. Reject Ticket
+```http
+POST /tickets/reject
+```
+
+#### Request Body Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| ticket_id | string | Yes | Ticket ID to reject |
+| user_id | string | Yes | Rejecting user's ID |
+
+### 6. Delete Ticket
+```http
+POST /tickets/delete
+```
+
+#### Request Body Parameters
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| ticket_id | string | Yes | Ticket ID to delete |
+
+
+### Error Response Format
+```json
+{
+  "detail": "Error message describing what went wrong"
+}
+```
+
+## Bot Process
+### Introduction
+This project run with 2 bots (`command_bot` and `event_bot`).
+1. `command_bot` is the main bot that handle all requests from team members. This bot will accept command include `/post`, `/edit`, `/delete`, `/change_permission`, `/check_permission`, `/cancel` and `/help`
+2. `event_bot` is the bot that handle all events from the chat and sending the announcement to the clients' group.
+
+### Function Pipeline ([Dashboard](https://docs.google.com/spreadsheets/d/1k2P8Ok0O6d9J3_WWDiEbmKpIkKrWYG96gB52zrEGOf0/edit?gid=0#gid=0))
+- `/post`
+  1. Use `/post` command to post an announcement.
+  2. Choose a category from the category button.
+  3. If the category is `others`, then input label or chat name. If the category is not `others`, then choose the language.
+  4. Input the content of the announcement, including text, image, video, document.
+  5. The ticket will be sent to admin group for approval.
+  6. Admin click `Approve` or `Reject` button to approve or reject the ticket.
+- `/edit`
+  1. Input the post ticket id want to edit (need to start with `POST-`)
+  2. Input the new content of the announcement, then the ticket will be sent to admin group for approval.
+  3. Admin click `Approve` or `Reject` button to approve or reject the ticket.
+- `/delete`
+  1. Input the post ticket id want to delete (need to start with `POST-`)
+  2. The ticket will be sent to admin group for approval.
+  3. Admin click `Approve` or `Reject` button to approve or reject the ticket.
+- `/change_permission`
+  1. Choose the `Add` or `Remove` button to adjust the permission.
+  2. Choose from `Admin` or `Whitelist` or `Both` button to adjust the permission.
+  3. Then refer a message from the user to adjust the permission.
+
+> [!TIP]
+> You can use `/cancel` command to cancel the process at any time.
+
+
