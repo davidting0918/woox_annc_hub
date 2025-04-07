@@ -10,10 +10,13 @@ from telegram.ext import (
     ConversationHandler,
     MessageHandler,
     filters,
+    JobQueue
 )
 from utils import get_logger, init_args, save_file
-
+import datetime
 from bot.lib.adaptor import AnnouncementClient as ac
+
+load_dotenv()
 
 CATEGORY, LANGUAGE, LABEL, CONTENT = range(4)
 EDIT_TICKET_ID, EDIT_NEW_CONTENT = range(2)
@@ -23,8 +26,8 @@ OPERATION, PERMISSION, USER = range(3)
 
 class CommandBot:
     REQUEST = request.HTTPXRequest(connection_pool_size=50000, connect_timeout=300, read_timeout=300)
-    CONFIRM_CHAT_ID = "-836971986"  # WOO Announcement Approve
-    TEST_CONFIRM_CHAT_ID = "5327851721"  # davidding_WG
+    CONFIRM_CHAT_ID = os.getenv("CONFIRM_CHAT_ID")  # WOO Announcement Approve
+    TEST_CONFIRM_CHAT_ID = os.getenv("TEST_CONFIRM_CHAT_ID")  # davidding_WG
 
     @property
     def name(self):
@@ -81,18 +84,22 @@ class CommandBot:
 
         return message
 
+    def escape_html(self, text):
+        """转义 HTML 特殊字符"""
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
     def get_report_message(self, ticket_id: str) -> str:
         data = self.client.get_ticket_info(ticket_id=ticket_id)["data"][0]
         if data["action"] == "post_annc":
             if data["category"] == "others":
                 message = (
                     f"<b>[{'Approved' if data['status'] == 'approved' else 'Rejected'} Message]</b>\n\n"
-                    f"<b>Operation:</b> <code>{data['action']}</code>\n"
-                    f"<b>ID:</b> {data['ticket_id']}\n"
-                    f"<b>Creator:</b> {data['creator_name']}\n"
-                    f"<b>Operator:</b> {data['approver_name']}\n"
-                    f"<b>Labels:</b> <code>{', '.join(data['label']) if data['label'] else ''}</code>\n"
-                    f"<b>Chats:</b> <code>{', '.join([i['chat_name'] for i in data['chats']]) if data['chats'] else ''}</code>\n"
+                    f"<b>Operation:</b> <code>{self.escape_html(data['action'])}</code>\n"
+                    f"<b>ID:</b> {self.escape_html(data['ticket_id'])}\n"
+                    f"<b>Creator:</b> {self.escape_html(data['creator_name'])}\n"
+                    f"<b>Operator:</b> {self.escape_html(data['approver_name'])}\n"
+                    f"<b>Labels:</b> <code>{self.escape_html(', '.join(data['label'])) if data['label'] else ''}</code>\n"
+                    f"<b>Chats:</b> <code>{self.escape_html(', '.join([i['chat_name'] for i in data['chats']])) if data['chats'] else ''}</code>\n"
                     f"<b>Expected Chat numbers:</b> {len(data['chats']) if data['status'] == 'approved' else 0}\n"
                     f"<b>Succeed Chat numbers:</b> {len(data['success_chats'])}\n"
                     f"<b>Failed Chat numbers:</b> {len(data['failed_chats'])}\n"
@@ -100,12 +107,12 @@ class CommandBot:
             else:
                 message = (
                     f"<b>[{'Approved' if data['status'] == 'approved' else 'Rejected'} Message]</b>\n\n"
-                    f"<b>Operation:</b> <code>{data['action']}</code>\n"
-                    f"<b>ID:</b> <code>{data['ticket_id']}</code>\n"
-                    f"<b>Creator:</b> {data['creator_name']}\n"
-                    f"<b>Operator:</b> {data['approver_name']}\n"
-                    f"<b>Category:</b> <code>{data['category'].replace('_', ' ').title()}</code>\n"
-                    f"<b>Language:</b> <code>{data['language'].title()}</code>\n"
+                    f"<b>Operation:</b> <code>{self.escape_html(data['action'])}</code>\n"
+                    f"<b>ID:</b> <code>{self.escape_html(data['ticket_id'])}</code>\n"
+                    f"<b>Creator:</b> {self.escape_html(data['creator_name'])}\n"
+                    f"<b>Operator:</b> {self.escape_html(data['approver_name'])}\n"
+                    f"<b>Category:</b> <code>{self.escape_html(data['category'].replace('_', ' ').title())}</code>\n"
+                    f"<b>Language:</b> <code>{self.escape_html(data['language'].title())}</code>\n"
                     f"<b>Expected Chat numbers:</b> {len(data['chats']) if data['status'] == 'approved' else 0}\n"
                     f"<b>Succeed Chat numbers:</b> {len(data['success_chats'])}\n"
                     f"<b>Failed Chat numbers:</b> {len(data['failed_chats'])}\n"
@@ -113,27 +120,27 @@ class CommandBot:
         elif data["action"] == "edit_annc":
             message = (
                 f"<b>[{'Approved' if data['status'] == 'approved' else 'Rejected'} Message]</b>\n\n"
-                f"<b>Operation:</b> <code>{data['action']}</code>\n"
-                f"<b>ID:</b> <code>{data['ticket_id']}</code>\n"
-                f"<b>Annc ID:</b> <code>{data['old_ticket_id']}</code>\n"
-                f"<b>Creator:</b> {data['creator_name']}\n"
-                f"<b>Operator:</b> {data['approver_name']}\n"
+                f"<b>Operation:</b> <code>{self.escape_html(data['action'])}</code>\n"
+                f"<b>ID:</b> <code>{self.escape_html(data['ticket_id'])}</code>\n"
+                f"<b>Annc ID:</b> <code>{self.escape_html(data['old_ticket_id'])}</code>\n"
+                f"<b>Creator:</b> {self.escape_html(data['creator_name'])}\n"
+                f"<b>Operator:</b> {self.escape_html(data['approver_name'])}\n"
                 f"<b>Expected Chat numbers:</b> {len(data['chats']) if data['status'] == 'approved' else 0}\n"
                 f"<b>Succeed Chat numbers:</b> {len(data['success_chats'])}\n"
                 f"<b>Failed Chat numbers:</b> {len(data['failed_chats'])}\n"
                 f"<b>Original Contents:</b>\n\n"
-                f"{data['old_content_html']}\n\n"
+                f"{self.escape_html(data['old_content_html'])}\n\n"
                 f"<b>New Contents:</b>\n\n"
-                f"{data['new_content_html']}\n"
+                f"{self.escape_html(data['new_content_html'])}\n"
             )
         else:  # delete ticket
             message = (
                 f"<b>[{'Approved' if data['status'] == 'approved' else 'Rejected'} Message]</b>\n\n"
-                f"<b>Operation:</b> <code>{data['action']}</code>\n"
-                f"<b>ID:</b> <code>{data['ticket_id']}</code>\n"
-                f"<b>Annc ID:</b> <code>{data['old_ticket_id']}</code>\n"
-                f"<b>Creator:</b> {data['creator_name']}\n"
-                f"<b>Operator:</b> {data['approver_name']}\n"
+                f"<b>Operation:</b> <code>{self.escape_html(data['action'])}</code>\n"
+                f"<b>ID:</b> <code>{self.escape_html(data['ticket_id'])}</code>\n"
+                f"<b>Annc ID:</b> <code>{self.escape_html(data['old_ticket_id'])}</code>\n"
+                f"<b>Creator:</b> {self.escape_html(data['creator_name'])}\n"
+                f"<b>Operator:</b> {self.escape_html(data['approver_name'])}\n"
                 f"<b>Expected Chat numbers:</b> {len(data['chats']) if data['status'] == 'approved' else 0}\n"
                 f"<b>Succeed Chat numbers:</b> {len(data['success_chats'])}\n"
                 f"<b>Failed Chat numbers:</b> {len(data['failed_chats'])}\n"
@@ -159,7 +166,7 @@ class CommandBot:
         operator = update.message.from_user
 
         if not self.client.in_whitelist(user_id=str(operator.id))["data"]:
-            await update.message.reply_text(f"Hi {operator.full_name}, You are not in the whitelist")
+            await update.message.reply_text(f"Hi {self.escape_markdown(operator.full_name)}, You are not in the whitelist")
             return ConversationHandler.END
 
         self.client.update_user_dashboard()
@@ -178,7 +185,7 @@ class CommandBot:
                 keyboard[-1].append(InlineKeyboardButton(name_callback[i][0], callback_data=name_callback[i][1]))
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        message = f"Hello {operator.full_name}! Please choose a category for your post."
+        message = f"Hello {self.escape_markdown(operator.full_name)}! Please choose a category for your post."
 
         await update.message.reply_text(message, reply_markup=reply_markup)
 
@@ -413,24 +420,30 @@ class CommandBot:
             self.client.reject_ticket(ticket_id=ticket_id, user_id=str(operator.id))
 
         report_message = self.get_report_message(ticket_id)
-
         await query.message.edit_text(report_message, parse_mode="HTML")
         self.client.update_ticket_dashboard()
 
         self.logger.info(f"Announcement `{ticket_id}` ticket {action} by {operator.full_name}({operator.id})")
         return ConversationHandler.END
+    
+    def escape_markdown(self, text):
+        special_characters = ['*', '_', '[', ']', '(', ')', '~', '>', '#', '+', '-', '=','|', '{', '}', '.', '!', ':', '@']
+        for char in special_characters:
+            text = text.replace(char, f'\{char}')
+        return text
 
     async def edit(self, update: Update, context: ContextTypes) -> None:
         operator = update.message.from_user
 
         if not self.client.in_whitelist(user_id=str(operator.id))["data"]:
-            await update.message.reply_text(f"Hi {operator.full_name}, You are not in the whitelist")
+            res_text = f"Hi {self.escape_markdown(operator.full_name)}, You are not in the whitelist"
+            await update.message.reply_text(res_text)
             return ConversationHandler.END
 
         self.client.update_ticket_dashboard()
 
         message = (
-            f"Hello {operator.full_name}\! Please enter the ID of the announcement you want to edit\. \n"
+            f"Hello {self.escape_markdown(operator.full_name)}\! Please enter the ID of the announcement you want to edit\. \n"
             f"Can check the ID in [**Announcement History**]"
             f"(https://docs.google.com/spreadsheets/d/1k2P8Ok0O6d9J3_WWDiEbmKpIkKrWYG96gB52zrEGOf0/edit?gid=0#gid=0)"
         )
@@ -447,7 +460,11 @@ class CommandBot:
         if "data" not in res:
             await update.message.reply_text(f"Ticket ID `{ticket_id}` not found, please check again")
             return EDIT_TICKET_ID
-        data = res["data"][0]
+        data = res["data"]
+        if len(data) == 0:
+            await update.message.reply_text(f"Ticket ID `{ticket_id}` not found, please check again")
+            return EDIT_TICKET_ID
+        data = data[0]
 
         if data["status"] != "approved":
             await update.message.reply_text(
@@ -532,13 +549,17 @@ class CommandBot:
         operator = update.message.from_user
 
         if not self.client.in_whitelist(user_id=str(operator.id))["data"]:
-            await update.message.reply_text(f"Hi {operator.full_name}, You are not in the whitelist")
+            await update.message.reply_text(f"Hi {self.escape_markdown(operator.full_name)}, You are not in the whitelist")
             return ConversationHandler.END
 
         self.client.update_ticket_dashboard()
         context.user_data["creator_id"] = str(operator.id)
         context.user_data["creator_name"] = operator.full_name
-        message = f"Hello {operator.full_name}\! Please enter the ID of the announcement you want to delete\. \n"
+        message = (
+            f"Hello {self.escape_markdown(operator.full_name)}\! Please enter the ID of the announcement you want to delete\. \n"
+            f"Can check the ID in [**Announcement History**]"
+            f"(https://docs.google.com/spreadsheets/d/1k2P8Ok0O6d9J3_WWDiEbmKpIkKrWYG96gB52zrEGOf0/edit?gid=0#gid=0)"
+        )
         await update.message.reply_text(message, parse_mode="MarkdownV2")
         return DELETE_TICKET_ID
 
@@ -552,7 +573,12 @@ class CommandBot:
             await update.message.reply_text(message)
             return DELETE_TICKET_ID
 
-        data = res["data"][0]
+        data = res["data"]
+        if len(data) == 0:
+            message = f"Ticket ID `{ticket_id}` not found, please check again"
+            await update.message.reply_text(message)
+            return DELETE_TICKET_ID
+        data = data[0]
         if data["action"] != "post_annc":
             message = f"Ticket ID `{ticket_id}` is not a post announcement ticket, please check again"
             await update.message.reply_text(message)
@@ -665,7 +691,7 @@ class CommandBot:
             [InlineKeyboardButton("Remove", callback_data="remove")],
         ]
         reply_markup = InlineKeyboardMarkup(callback)
-        message = f"Hello {operator.full_name}! Please choose the operation you want to perform."
+        message = f"Hello {self.escape_markdown(operator.full_name)}! Please choose the operation you want to perform."
         await update.message.reply_text(message, reply_markup=reply_markup)
         return OPERATION
 
@@ -778,6 +804,11 @@ class CommandBot:
     def run(self) -> None:
         self.logger.info(f"Starting {self.name}...")
         app = Application.builder().token(self.bot_key).build()
+        
+        # Initialize JobQueue
+        job_queue = app.job_queue
+        # Add a job to check pending tickets every 15 minutes
+        job_queue.run_repeating(self.check_pending_tickets_job, interval=600, first=0)
 
         app.add_handler(CommandHandler("start", self.start))
 
@@ -863,6 +894,42 @@ class CommandBot:
         app.add_handler(CommandHandler("help", self.help))
         app.run_polling()
 
+
+    async def check_pending_tickets_job(self, context):
+        try:
+            res = self.client.get_ticket_info(status="pending")
+            tickets = res["data"]
+            pending_tickets = []
+            for ticket in tickets:
+                # Convert the Unix timestamp to a datetime object
+                created_time = datetime.datetime.fromtimestamp(float(ticket["created_timestamp"]/1000))
+                format_created_time = created_time.strftime("%Y-%m-%d %H:%M:%S")
+                # Calculate the time difference
+                time_diff = datetime.datetime.now() - created_time
+                ticket['format_created_time'] = format_created_time
+                ticket['title'] = ticket['content_text'].split('\n')[0]
+                # Check if the ticket is older than 15 minutes and less than 1 day
+                if datetime.timedelta(minutes=30) < time_diff < datetime.timedelta(days=1):
+                    pending_tickets.append(ticket)
+            if not pending_tickets or len(pending_tickets) <= 0:
+                return
+            alert_message = "**Pending Tickets Alert:**\n"
+            for index, ticket in enumerate(pending_tickets, start=1):
+                alert_message += (
+                    f"{index}. Ticket ID: {ticket['ticket_id']}\n"
+                    f"   Create Time: {ticket['format_created_time']}\n"
+                    f"   Creator: {ticket['creator_name']}\n"
+                    f"   Title: {ticket['title']}\n"
+                )
+            alert_message += "@Ryenliu_WG @vy_WG @khanh_WG @AlanNguyen_WG @Karol_WG @AndyYong_WG"
+            
+            await context.bot.send_message(chat_id=os.getenv("CONFIRM_CHAT_ID"), text=self.escape_markdown(alert_message), parse_mode="MarkdownV2")
+            print(alert_message)
+        except Exception as e:
+            # Log the exception or handle it as needed
+            import traceback
+            print(traceback.print_exc())
+            print(f"An error occurred: {e}")
 
 if __name__ == "__main__":
     load_dotenv()

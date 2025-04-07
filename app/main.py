@@ -67,3 +67,6 @@ if __name__ == "__main__":
     args = args.parse_args()
     app = create_app(args.test)
     uvicorn.run(app, host="0.0.0.0", port=8000)
+    # from app.chat_info.services import update_chat_dashboard
+    # import asyncio
+    # asyncio.run(update_chat_dashboard(direction="pull"))

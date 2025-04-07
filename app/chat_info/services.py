@@ -144,7 +144,12 @@ async def update_chat_dashboard(direction: str = "pull", **kwargs):
         results = []
         for data in chat_info_db:
             chat = Chat(**data)
-            new_data = chat_info[chat_info["name"] == chat.name].to_dict(orient="records")[0]
+            filtered_data = chat_info[chat_info["name"] == chat.name].to_dict(orient="records")
+
+            if not filtered_data:
+                print(f"No matching records found for chat.name: {chat.name}")
+                continue    
+            new_data = filtered_data[0]
             # dashboard can only update the category, language, label
             chat.update(
                 UpdateChatInfo(

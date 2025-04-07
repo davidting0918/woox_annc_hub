@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime as dt
 from enum import Enum
 from typing import Dict, List, Optional
-
+import logging
 from pydantic import BaseModel, Field
 from telegram import Bot, request
 from telegram.error import TelegramError
@@ -153,17 +153,18 @@ class PostTicket(Ticket):
                     "status": True,
                 }
             except TelegramError as e:
+                logging.error(f"Error sending message to chat {chat['chat_id']}, name: {chat['chat_name']}, error: {str(e)}")
                 return {"chat_id": chat["chat_id"], "chat_name": chat["chat_name"], "status": False, "error": str(e)}
 
         bot = EventBot(token=s.event_bot_token)
 
-        batch_size = 50
+        batch_size = 10
         results = []
         for i in range(0, len(self.chats), batch_size):
             batch = self.chats[i : i + batch_size]
             batch_results = await asyncio.gather(*[send_message(chat) for chat in batch])
             results.extend(batch_results)
-            time.sleep(1)
+            time.sleep(0.5)
 
         success_chats = [result for result in results if result["status"]]
         failed_chats = [result for result in results if not result["status"]]

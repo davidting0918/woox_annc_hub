@@ -10,3 +10,5 @@ bot/log
 bot/db/files
 bot/.env
 misc.py
+*.out
+.env
